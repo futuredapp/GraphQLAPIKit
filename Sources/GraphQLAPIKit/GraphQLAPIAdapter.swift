@@ -14,7 +14,7 @@ public protocol GraphQLAPIAdapterProtocol: AnyObject {
     /// - Returns: An object that can be used to cancel an in progress fetch.
     func fetch<Query: GraphQLQuery>(
         query: Query,
-        context: RequestContext?,
+        context: RequestHeaders?,
         queue: DispatchQueue,
         resultHandler: @escaping (Result<GraphQLResult<Query.Data>, Error>) -> Void
     ) -> Cancellable
@@ -29,7 +29,7 @@ public protocol GraphQLAPIAdapterProtocol: AnyObject {
     /// - Returns: An object that can be used to cancel an in progress mutation.
     func perform<Mutation: GraphQLMutation>(
         mutation: Mutation,
-        context: RequestContext?,
+        context: RequestHeaders?,
         queue: DispatchQueue,
         resultHandler: @escaping (Result<GraphQLResult<Mutation.Data>, Error>) -> Void
     ) -> Cancellable
@@ -61,7 +61,7 @@ final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
 
     func fetch<Query>(
         query: Query,
-        context: RequestContext?,
+        context: RequestHeaders?,
         queue: DispatchQueue,
         resultHandler: @escaping GraphQLResultHandler<Query.Data>
     ) -> Cancellable where Query : GraphQLQuery {
@@ -76,7 +76,7 @@ final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
 
     func perform<Mutation>(
         mutation: Mutation,
-        context: RequestContext?,
+        context: RequestHeaders?,
         queue: DispatchQueue,
         resultHandler: @escaping GraphQLResultHandler<Mutation.Data>
     ) -> Cancellable where Mutation : GraphQLMutation {
@@ -130,6 +130,10 @@ private struct RequestHeaderInterceptor: ApolloInterceptor {
         completion: @escaping (Result<GraphQLResult<Operation.Data>, Error>) -> Void
     ) {
         defaultHeaders.forEach { request.addHeader(name: $0.key, value: $0.value) }
+        if let additionalHeaders = request.context as? RequestHeaders {
+            additionalHeaders.additionalHeaders.forEach { request.addHeader(name: $0.key, value: $0.value) }
+        }
+
         chain.proceedAsync(request: request, response: response, interceptor: self, completion: completion)
     }
 }
