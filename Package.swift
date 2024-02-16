@@ -20,7 +20,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/apollographql/apollo-ios.git",
-            from: "1.9.0"
+            exact: "1.9.0" // Do not forget to download related to this version Apollo CLI and include it with package
         )
     ],
     targets: [
@@ -28,12 +28,6 @@ let package = Package(
             name: "GraphQLAPIKit",
             dependencies: [
                 .product(name: "Apollo", package: "apollo-ios"),
-            ],
-            exclude: [
-                // "Networking/CloudAPIAdapter/CloudGraphQL/PasswordManagementMutations.graphql",
-                // "Networking/CloudAPIAdapter/CloudGraphQL/PasswordManagementQueries.graphql",
-                // "Networking/CloudAPIAdapter/CloudGraphQL/schema.json",
-                // "Networking/CloudAPIAdapter/CloudGraphQL/apollo-codegen-config.json"
             ]
         )
     ]
