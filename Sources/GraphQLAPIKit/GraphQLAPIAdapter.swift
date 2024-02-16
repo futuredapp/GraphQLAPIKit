@@ -35,8 +35,8 @@ public protocol GraphQLAPIAdapterProtocol: AnyObject {
     ) -> Cancellable
 }
 
-final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
-    private let apollo: ApolloClient
+public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
+    private let apollo: ApolloClientProtocol
 
     public init(
         url: URL,
@@ -59,7 +59,7 @@ final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
         )
     }
 
-    func fetch<Query>(
+    public func fetch<Query>(
         query: Query,
         context: RequestHeaders?,
         queue: DispatchQueue,
@@ -68,13 +68,24 @@ final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
         apollo.fetch(
             query: query,
             cachePolicy: .fetchIgnoringCacheCompletely,
+            contextIdentifier: nil,
             context: context,
-            queue: queue,
-            resultHandler: resultHandler
-        )
+            queue: queue
+        ) { result in
+            switch result {
+            case .success(let result):
+                if let errors = result.errors {
+                    resultHandler(.failure(GraphQLAPIAdapterError(error: ApolloError(errors: errors))))
+                } else {
+                    resultHandler(.success(result))
+                }
+            case .failure(let error):
+                resultHandler(.failure(GraphQLAPIAdapterError(error: error)))
+            }
+        }
     }
 
-    func perform<Mutation>(
+    public func perform<Mutation>(
         mutation: Mutation,
         context: RequestHeaders?,
         queue: DispatchQueue,
@@ -84,9 +95,19 @@ final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
             mutation: mutation,
             publishResultToStore: false,
             context: context,
-            queue: queue,
-            resultHandler: resultHandler
-        )
+            queue: queue
+        ) { result in
+            switch result {
+            case .success(let result):
+                if let errors = result.errors {
+                    resultHandler(.failure(GraphQLAPIAdapterError(error: ApolloError(errors: errors))))
+                } else {
+                    resultHandler(.success(result))
+                }
+            case .failure(let error):
+                resultHandler(.failure(GraphQLAPIAdapterError(error: error)))
+            }
+        }
     }
 }
 
@@ -105,12 +126,9 @@ private struct NetworkInterceptorProvider: InterceptorProvider {
             MaxRetryInterceptor(),
             NetworkFetchInterceptor(client: self.client),
             ResponseCodeInterceptor(),
+            MultipartResponseParsingInterceptor(),
             JSONResponseParsingInterceptor()
         ]
-    }
-
-    func additionalErrorInterceptor<Operation: GraphQLOperation>(for operation: Operation) -> ApolloErrorInterceptor? {
-        nil
     }
 }
 
