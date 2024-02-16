@@ -16,7 +16,7 @@ public protocol GraphQLAPIAdapterProtocol: AnyObject {
         query: Query,
         context: RequestHeaders?,
         queue: DispatchQueue,
-        resultHandler: @escaping (Result<GraphQLResult<Query.Data>, Error>) -> Void
+        resultHandler: @escaping (Result<Query.Data, GraphQLAPIAdapterError>) -> Void
     ) -> Cancellable
     
     /// Performs a mutation by sending it to the server.
@@ -31,7 +31,7 @@ public protocol GraphQLAPIAdapterProtocol: AnyObject {
         mutation: Mutation,
         context: RequestHeaders?,
         queue: DispatchQueue,
-        resultHandler: @escaping (Result<GraphQLResult<Mutation.Data>, Error>) -> Void
+        resultHandler: @escaping (Result<Mutation.Data, GraphQLAPIAdapterError>) -> Void
     ) -> Cancellable
 }
 
@@ -63,7 +63,7 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
         query: Query,
         context: RequestHeaders?,
         queue: DispatchQueue,
-        resultHandler: @escaping GraphQLResultHandler<Query.Data>
+        resultHandler: @escaping (Result<Query.Data, GraphQLAPIAdapterError>) -> Void
     ) -> Cancellable where Query : GraphQLQuery {
         apollo.fetch(
             query: query,
@@ -76,8 +76,10 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
             case .success(let result):
                 if let errors = result.errors {
                     resultHandler(.failure(GraphQLAPIAdapterError(error: ApolloError(errors: errors))))
+                } else if let data = result.data {
+                    resultHandler(.success(data))
                 } else {
-                    resultHandler(.success(result))
+                    assertionFailure("Did not receive no data nor errors")
                 }
             case .failure(let error):
                 resultHandler(.failure(GraphQLAPIAdapterError(error: error)))
@@ -89,7 +91,7 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
         mutation: Mutation,
         context: RequestHeaders?,
         queue: DispatchQueue,
-        resultHandler: @escaping GraphQLResultHandler<Mutation.Data>
+        resultHandler: @escaping (Result<Mutation.Data, GraphQLAPIAdapterError>) -> Void
     ) -> Cancellable where Mutation : GraphQLMutation {
         apollo.perform(
             mutation: mutation,
@@ -101,8 +103,10 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
             case .success(let result):
                 if let errors = result.errors {
                     resultHandler(.failure(GraphQLAPIAdapterError(error: ApolloError(errors: errors))))
+                } else if let data = result.data {
+                    resultHandler(.success(data))
                 } else {
-                    resultHandler(.success(result))
+                    assertionFailure("Did not receive no data nor errors")
                 }
             case .failure(let error):
                 resultHandler(.failure(GraphQLAPIAdapterError(error: error)))

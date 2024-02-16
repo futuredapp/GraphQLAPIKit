@@ -1,11 +1,11 @@
 import Apollo
 import Foundation
 
-public struct GraphQLAPIError: LocalizedError {
+public struct GraphQLError: LocalizedError {
     public let message: String
     public let code: String?
 
-    init(from graphQlError: GraphQLError) {
+    init(from graphQlError: Apollo.GraphQLError) {
         if let message = graphQlError.message {
             self.message = message
         } else {

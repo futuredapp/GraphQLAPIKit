@@ -11,10 +11,12 @@ public enum GraphQLAPIAdapterError: LocalizedError {
     /// Unhandled network error received from `Apollo.URLSessionClient`
     case unhandled(Error)
 
+    /// Request was cancelled
+    case cancelled
 
     /// GraphQL errors
     /// Errors returned by GraphQL API as part of `errors` field
-    case graphQl([GraphQLAPIError])
+    case graphQl([GraphQLError])
 
 
     init(error: Error) {
@@ -39,6 +41,8 @@ public enum GraphQLAPIAdapterError: LocalizedError {
             return error.localizedDescription
         case .graphQl(let error):
             return error.first?.errorDescription
+        case .cancelled:
+            return nil
         }
     }
 }

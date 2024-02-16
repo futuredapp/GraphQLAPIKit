@@ -1,5 +1,5 @@
 import Apollo
 
 struct ApolloError: Error {
-    let errors: [GraphQLError]
+    let errors: [Apollo.GraphQLError]
 }
