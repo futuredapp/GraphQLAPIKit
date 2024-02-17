@@ -15,13 +15,7 @@ let package = Package(
             targets: [
                 "GraphQLAPIKit"
             ]
-        ),
-        .library(
-            name: "GraphQLGenerated",
-            targets: [
-                "GraphQLGenerated"
-            ]
-        ),
+        )
     ],
     dependencies: [
         .package(
@@ -32,12 +26,6 @@ let package = Package(
     targets: [
         .target(
             name: "GraphQLAPIKit",
-            dependencies: [
-                .product(name: "Apollo", package: "apollo-ios"),
-            ]
-        ),
-        .target(
-            name: "GraphQLGenerated",
             dependencies: [
                 .product(name: "Apollo", package: "apollo-ios"),
             ]
