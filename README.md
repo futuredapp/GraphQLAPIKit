@@ -104,7 +104,7 @@ let mutation = MyExampleMutation()
 
 ### Fetching the query/perform mutation
 ```swift
-let apiAdapter = GraphQLAPIAdapter(url: URL("https://MyAPIUrl.com")!)
+let apiAdapter = GraphQLAPIAdapter(url: URL(string: "https://MyAPIUrl.com")!)
 let queryResult = await apiAdapter.fetch(query: query)
 let mutationResult = await apiAdapter.perform(mutation: mutation)
 ```
