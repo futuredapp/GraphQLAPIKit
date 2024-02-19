@@ -65,10 +65,26 @@ Add your first Query or Mutation and save it with `.graphql` extension to `Queri
 #### 6. Add Xcode Biuld Phase Script
 At your main app's target add a new build phase named `Generate GraphQL Operations`.
 Move your newly created build phase above the `Compile Sources` phase.
-Add script
+Add script:
 ```sh
 SDKROOT=$(/usr/bin/xcrun --sdk macosx --show-sdk-path)
 SWIFT_PACKAGES="${BUILD_DIR%/Build/*}/SourcePackages/checkouts"
 
 ${SWIFT_PACKAGES}/GraphQLAPIKit/Resources/apollo-ios-cli generate --path ./GraphQLAPI/apollo-codegen-config.json
 ```
+
+#### 7. Build your main target
+
+#### 8. Add GraphQLAPI local package
+- Go to Xcode -> File -> Add Package Dependencies..
+- Choose `Add Local...`
+- Add `GraphQLAPI` as local Swift Package
+Make sure, that `GraphQLAPI` library was added to your main's target `Frameworks, Libraries, and Embedded Content` list.
+For your project's test target add `GraphQLAPIMocks` library if necessary.
+
+#### 9. Update `.gitignore` file
+Add `*.graphql.swift` to your repository's git ignore file to ignore Apollo generated code.
+*!Content of generated `Schema` folder has to be commited to the repository!*
+
+#### 10. Exclude `GraphQLAPI` folder from your linter's rule if necessary
+
