@@ -98,12 +98,18 @@ Add `*.graphql.swift` to your repository's git ignore file to ignore Apollo gene
 
 ### Defining Query or Mutation
 ```swift
+import GraphQLAPI
+import GraphQLAPIKit
+
 let query = MyExampleQuery()
 let mutation = MyExampleMutation()
 ```
 
 ### Fetching the query/perform mutation
 ```swift
+import GraphQLAPI
+import GraphQLAPIKit
+
 let apiAdapter = GraphQLAPIAdapter(url: URL(string: "https://MyAPIUrl.com")!)
 let queryResult = await apiAdapter.fetch(query: query)
 let mutationResult = await apiAdapter.perform(mutation: mutation)
