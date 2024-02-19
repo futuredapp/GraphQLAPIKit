@@ -73,21 +73,24 @@ SWIFT_PACKAGES="${BUILD_DIR%/Build/*}/SourcePackages/checkouts"
 ${SWIFT_PACKAGES}/GraphQLAPIKit/Resources/apollo-ios-cli generate --path ./GraphQLAPI/apollo-codegen-config.json
 ```
 
-#### 7. Build your main target
+#### 7. Disable User Script Sandboxing
+Go to your application main target's Build Settings and set `User Script Sandboxing` to `NO`
 
-#### 8. Add GraphQLAPI local package
+#### 8. Build your main target
+
+#### 9. Add GraphQLAPI local package
 - Go to Xcode -> File -> Add Package Dependencies..
 - Choose `Add Local...`
 - Add `GraphQLAPI` as local Swift Package.
 Make sure, that `GraphQLAPI` library was added to your main's target `Frameworks, Libraries, and Embedded Content` list.
 For your project's test target add `GraphQLAPIMocks` library if necessary.
 
-#### 9. Update `.gitignore` file
+#### 10. Update `.gitignore` file
 Add `*.graphql.swift` to your repository's git ignore file to ignore Apollo generated code.
 
 **Content of generated `Schema` folder has to be commited to the repository**
 
-#### 10. Exclude `GraphQLAPI` folder from your linter's rule if necessary
+#### 11. Exclude `GraphQLAPI` folder from your linter's rule if necessary
 
 ## Usage
 
