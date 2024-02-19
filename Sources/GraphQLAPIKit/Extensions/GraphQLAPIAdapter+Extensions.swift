@@ -5,8 +5,8 @@ import Foundation
 public extension GraphQLAPIAdapterProtocol {
     func fetch<Query: GraphQLQuery>(
         query: Query,
-        context: RequestHeaders?,
-        queue: DispatchQueue
+        context: RequestHeaders? = nil,
+        queue: DispatchQueue = .main
     ) async -> Result<Query.Data, GraphQLAPIAdapterError> {
         let cancellable = CancellableContinuation<Query.Data>()
 
@@ -23,8 +23,8 @@ public extension GraphQLAPIAdapterProtocol {
 
     func perform<Mutation: GraphQLMutation>(
         mutation: Mutation,
-        context: RequestHeaders?,
-        queue: DispatchQueue
+        context: RequestHeaders? = nil,
+        queue: DispatchQueue = .main
     ) async -> Result<Mutation.Data, GraphQLAPIAdapterError> {
         let cancellable = CancellableContinuation<Mutation.Data>()
 
