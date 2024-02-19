@@ -18,6 +18,8 @@ Install or add following line to your dependencies:
 
 ## Setup Your Project
 
+**Make sure that `GraphQLAPIKit` is added as a package dependency to your project**
+
 #### 1. Create `GraphQLAPI` folder at your `ProjectName.xcodeproj` level
 
 #### 2. Add Apollo configuration file
