@@ -10,7 +10,7 @@ Currently there is no support for some Apollo's features:
 
 ## Installation
 
-When using Swift package manager install or add following line to your dependencies:
+Install or add following line to your dependencies:
 
 ```swift
 .package(url: "https://github.com/futuredapp/GraphQLAPIKit.git", from: "1.0.0")
@@ -18,3 +18,38 @@ When using Swift package manager install or add following line to your dependenc
 
 ## Setup Your Project
 
+#### 1. Create `GraphQLAPI` folder at your `ProjectName.xcodeproj` level
+
+#### 2. Add Apollo configuration file
+
+Add `apollo-codegen-config.json` file and add it `GraphQLAPI` folder.
+Copy and paste json configuration to newly created file:
+```json
+{
+  "schemaName" : "GraphQLAPI",
+  "input" : {
+    "operationSearchPaths" : [
+      "**/*.graphql"
+    ],
+    "schemaSearchPaths" : [
+      "./schema.json"
+    ]
+  },
+  "output" : {
+    "schemaTypes" : {
+      "path" : "./",
+      "moduleType" : {
+        "swiftPackageManager": {}
+      }
+    },
+    "operations" : {
+      "inSchemaModule" : {}
+    },
+    "testMocks" : {
+      "swiftPackage": {
+        "targetName": "GraphQLAPIMocks"
+      }
+    }
+  }
+}
+```
