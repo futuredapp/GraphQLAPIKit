@@ -2,7 +2,7 @@ import Apollo
 import ApolloAPI
 import Foundation
 
-extension GraphQLAPIAdapterProtocol {
+public extension GraphQLAPIAdapterProtocol {
     func fetch<Query: GraphQLQuery>(
         query: Query,
         context: RequestHeaders?,
@@ -21,7 +21,7 @@ extension GraphQLAPIAdapterProtocol {
         }
     }
 
-    public func perform<Mutation: GraphQLMutation>(
+    func perform<Mutation: GraphQLMutation>(
         mutation: Mutation,
         context: RequestHeaders?,
         queue: DispatchQueue
