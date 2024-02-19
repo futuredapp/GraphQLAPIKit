@@ -78,13 +78,36 @@ ${SWIFT_PACKAGES}/GraphQLAPIKit/Resources/apollo-ios-cli generate --path ./Graph
 #### 8. Add GraphQLAPI local package
 - Go to Xcode -> File -> Add Package Dependencies..
 - Choose `Add Local...`
-- Add `GraphQLAPI` as local Swift Package
+- Add `GraphQLAPI` as local Swift Package.
 Make sure, that `GraphQLAPI` library was added to your main's target `Frameworks, Libraries, and Embedded Content` list.
 For your project's test target add `GraphQLAPIMocks` library if necessary.
 
 #### 9. Update `.gitignore` file
 Add `*.graphql.swift` to your repository's git ignore file to ignore Apollo generated code.
-*!Content of generated `Schema` folder has to be commited to the repository!*
+
+**Content of generated `Schema` folder has to be commited to the repository**
 
 #### 10. Exclude `GraphQLAPI` folder from your linter's rule if necessary
 
+## Usage
+
+### Defining Query or Mutation
+```swift
+let query = MyExampleQuery()
+let mutation = MyExampleMutation()
+```
+
+### Fetching the query/perform mutation
+```swift
+let apiAdapter = GraphQLAPIAdapter(url: URL("https://MyAPIUrl.com")!)
+let queryResult = await apiAdapter.fetch(query: query)
+let mutationResult = await apiAdapter.perform(mutation: mutation)
+```
+
+## Contributors
+
+- [Ievgen Samoilyk](https://github.com/samoilyk), <ievgen.samoilyk@futured.app>.
+
+## License
+
+GraphQLAPIKit is available under the MIT license. See the [LICENSE file](LICENSE) for more information.
