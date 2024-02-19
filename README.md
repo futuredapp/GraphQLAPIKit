@@ -24,8 +24,8 @@ Install or add following line to your dependencies:
 
 #### 2. Add Apollo configuration file
 
-Add `apollo-codegen-config.json` file and add it `GraphQLAPI` folder.
-Copy and paste json configuration to newly created file:
+Add `apollo-codegen-config.json` file and add it to `GraphQLAPI` folder.
+Copy and paste json configuration to the newly created file:
 ```json
 {
   "schemaName" : "GraphQLAPI",
@@ -56,7 +56,7 @@ Copy and paste json configuration to newly created file:
 }
 ```
 #### 3. Add schema file
-Add GraphQL JSON schema to `GraphQLAPI` folder and name it `schema.json`.
+Add GraphQL JSON schema to the `GraphQLAPI` folder and name it `schema.json`.
 
 #### 4. Add Queries And Mutations Folders
 Add `Queries` and `Mutations` folders to `GraphQLAPI` folder.
