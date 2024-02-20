@@ -20,15 +20,15 @@ Install or add following line to your dependencies:
 
 **Make sure that `GraphQLAPIKit` is added as a package dependency to your project**
 
-#### 1. Create `GraphQLAPI` folder at your `ProjectName.xcodeproj` level
+#### 1. Create `GraphQLGenerated` folder at your `ProjectName.xcodeproj` level
 
 #### 2. Add Apollo configuration file
 
-Add `apollo-codegen-config.json` file and add it to `GraphQLAPI` folder.
+Add `apollo-codegen-config.json` file and add it to `GraphQLGenerated` folder.
 Copy and paste json configuration to the newly created file:
 ```json
 {
-  "schemaName" : "GraphQLAPI",
+  "schemaName" : "GraphQLGenerated",
   "input" : {
     "operationSearchPaths" : [
       "**/*.graphql"
@@ -49,17 +49,17 @@ Copy and paste json configuration to the newly created file:
     },
     "testMocks" : {
       "swiftPackage": {
-        "targetName": "GraphQLAPIMocks"
+        "targetName": "GraphQLGeneratedMocks"
       }
     }
   }
 }
 ```
 #### 3. Add schema file
-Add GraphQL JSON schema to the `GraphQLAPI` folder and name it `schema.json`.
+Add GraphQL JSON schema to the `GraphQLGenerated` folder and name it `schema.json`.
 
 #### 4. Add Queries And Mutations Folders
-Add `Queries` and `Mutations` folders to `GraphQLAPI` folder.
+Add `Queries` and `Mutations` folders to `GraphQLGenerated` folder.
 
 #### 5. Define Your first GraphQL Query Or Mutation
 Add your first Query or Mutation and save it with `.graphql` extension to `Queries` or `Mutations` folders.
@@ -72,7 +72,7 @@ Add script:
 SDKROOT=$(/usr/bin/xcrun --sdk macosx --show-sdk-path)
 SWIFT_PACKAGES="${BUILD_DIR%/Build/*}/SourcePackages/checkouts"
 
-${SWIFT_PACKAGES}/GraphQLAPIKit/Resources/apollo-ios-cli generate --path ./GraphQLAPI/apollo-codegen-config.json
+${SWIFT_PACKAGES}/GraphQLAPIKit/Resources/apollo-ios-cli generate --path ./GraphQLGenerated/apollo-codegen-config.json
 ```
 
 #### 7. Disable User Script Sandboxing
@@ -80,26 +80,26 @@ Go to your application main target's Build Settings and set `User Script Sandbox
 
 #### 8. Build your main target
 
-#### 9. Add GraphQLAPI local package
+#### 9. Add GraphQLGenerated local package
 - Go to Xcode -> File -> Add Package Dependencies..
 - Choose `Add Local...`
-- Add `GraphQLAPI` as local Swift Package.
-Make sure, that `GraphQLAPI` library was added to your main's target `Frameworks, Libraries, and Embedded Content` list.
-For your project's test target add `GraphQLAPIMocks` library if necessary.
+- Add `GraphQLGenerated` as local Swift Package.
+Make sure, that `GraphQLGenerated` library was added to your main's target `Frameworks, Libraries, and Embedded Content` list.
+For your project's test target add `GraphQLGeneratedMocks` library if necessary.
 
 #### 10. Update `.gitignore` file
 Add `*.graphql.swift` to your repository's git ignore file to ignore Apollo generated code.
 
 **Content of generated `Schema` folder has to be commited to the repository**
 
-#### 11. Exclude `GraphQLAPI` folder from your linter's rule if necessary
+#### 11. Exclude `GraphQLGenerated` folder from your linter's rule if necessary
 
 ## Usage
 
 ### Defining Query or Mutation
 ```swift
-import GraphQLAPI
 import GraphQLAPIKit
+import GraphQLGenerated
 
 let query = MyExampleQuery()
 let mutation = MyExampleMutation()
@@ -107,8 +107,8 @@ let mutation = MyExampleMutation()
 
 ### Fetching the query/perform mutation
 ```swift
-import GraphQLAPI
 import GraphQLAPIKit
+import GraphQLGenerated
 
 let apiAdapter = GraphQLAPIAdapter(url: URL(string: "https://MyAPIUrl.com")!)
 let queryResult = await apiAdapter.fetch(query: query)
