@@ -22,6 +22,8 @@ public enum GraphQLAPIAdapterError: LocalizedError {
     init(error: Error) {
         if let error = error as? GraphQLAPIAdapterError {
             self = error
+        } else if let error = error as? ApolloError {
+            self = .graphQl(error.errors.map(GraphQLError.init))
         } else if let error = error as? URLSessionClient.URLSessionClientError,
             case let URLSessionClient.URLSessionClientError.networkError(_, response, underlyingError) = error
         {
