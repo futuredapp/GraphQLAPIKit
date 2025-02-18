@@ -20,7 +20,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/apollographql/apollo-ios.git",
-            exact: "1.9.0" // Do not forget to download related to this version Apollo CLI and include it with package
+            exact: "1.17.0" // Do not forget to download related to this version Apollo CLI and include it with package
         )
     ],
     targets: [
