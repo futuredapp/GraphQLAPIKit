@@ -3,12 +3,12 @@ import ApolloAPI
 
 struct NetworkInterceptorProvider: InterceptorProvider {
     private let defaultHeaders: [String: String]
-    private let interceptors: [ApolloInterceptor]
+    private let interceptors: [any InjectableInterceptor]
     private let errorInterceptor: (any ApolloErrorInterceptor)?
 
     init(
         defaultHeaders: [String: String],
-        interceptors: [ApolloInterceptor],
+        interceptors: [any InjectableInterceptor],
         errorInterceptor: (any ApolloErrorInterceptor)?
     ) {
         self.defaultHeaders = defaultHeaders
@@ -17,7 +17,13 @@ struct NetworkInterceptorProvider: InterceptorProvider {
     }
 
     func interceptors<Operation: GraphQLOperation>(for operation: Operation) -> [ApolloInterceptor] {
-        interceptors
+        interceptors.filter { interceptor in
+            guard let specificOperationType = interceptor.operationSpecific else {
+                return true
+            }
+
+            return type(of: operation) == specificOperationType
+        }
     }
 
     func additionalErrorInterceptor<Operation: GraphQLOperation>(for operation: Operation) -> (any ApolloErrorInterceptor)?  {
