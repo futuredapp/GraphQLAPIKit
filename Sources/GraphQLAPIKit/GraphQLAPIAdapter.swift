@@ -42,7 +42,8 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
         url: URL,
         urlSessionConfiguration: URLSessionConfiguration = .default,
         defaultHeaders: [String: String] = [:],
-        additionalInterceptors: repeat each Interceptor
+        additionalInterceptors: repeat each Interceptor,
+        errorInterceptor: (any ApolloErrorInterceptor)? = nil
     ) {
         let defaultInterceptors: [any InjectableInterceptor] = [
             GraphQLAPIKitRequestHeaderInterceptor(defaultHeaders: defaultHeaders),
@@ -73,7 +74,8 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
 
         let provider = NetworkInterceptorProvider(
             defaultHeaders: defaultHeaders,
-            interceptors: sortedInterceptors
+            interceptors: sortedInterceptors,
+            errorInterceptor: errorInterceptor
         )
 
         let networkTransport = RequestChainNetworkTransport(
