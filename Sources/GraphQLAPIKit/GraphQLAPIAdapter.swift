@@ -38,14 +38,42 @@ public protocol GraphQLAPIAdapterProtocol: AnyObject {
 public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
     private let apollo: ApolloClientProtocol
 
-    public init(
+    public init<each Interceptor: InjectableInterceptor>(
         url: URL,
         urlSessionConfiguration: URLSessionConfiguration = .default,
-        defaultHeaders: [String: String] = [:]
+        defaultHeaders: [String: String] = [:],
+        additionalInterceptors: repeat each Interceptor
     ) {
+        let defaultInterceptors: [any InjectableInterceptor] = [
+            GraphQLAPIKitRequestHeaderInterceptor(defaultHeaders: defaultHeaders),
+            GraphQLAPIKitMaxRetryInterceptor(),
+            GraphQLAPIKitNetworkFetchInterceptor(client: URLSessionClient(sessionConfiguration: urlSessionConfiguration)),
+            GraphQLAPIKitResponseCodeInterceptor(),
+            GraphQLAPIKitMultipartResponseParsingInterceptor(),
+            GraphQLAPIKitJSONResponseParsingInterceptor()
+        ]
+
+        var injectedInterceptors: [any InjectableInterceptor] = []
+        for interceptor in repeat each additionalInterceptors {
+            injectedInterceptors.append(interceptor)
+        }
+
+        let allInterceptors = defaultInterceptors + injectedInterceptors
+
+        let sortedInterceptors = allInterceptors.sorted { lhs, rhs in
+            switch (lhs.placement, rhs.placement) {
+            case (.beforeNetworkFetch, .afterNetworkFetch):
+                return true
+            case (.afterNetworkFetch, .beforeNetworkFetch):
+                return false
+            default:
+                return lhs.placement.priority < rhs.placement.priority
+            }
+        }
+
         let provider = NetworkInterceptorProvider(
-            client: URLSessionClient(sessionConfiguration: urlSessionConfiguration),
-            defaultHeaders: defaultHeaders
+            defaultHeaders: defaultHeaders,
+            interceptors: sortedInterceptors
         )
 
         let networkTransport = RequestChainNetworkTransport(
@@ -114,50 +142,3 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
         }
     }
 }
-
-private struct NetworkInterceptorProvider: InterceptorProvider {
-    private let client: URLSessionClient
-    private let defaultHeaders: [String: String]
-
-    init(client: URLSessionClient, defaultHeaders: [String: String]) {
-        self.client = client
-        self.defaultHeaders = defaultHeaders
-    }
-
-    func interceptors<Operation: GraphQLOperation>(for operation: Operation) -> [ApolloInterceptor] {
-        [
-            RequestHeaderInterceptor(defaultHeaders: defaultHeaders),
-            MaxRetryInterceptor(),
-            NetworkFetchInterceptor(client: self.client),
-            ResponseCodeInterceptor(),
-            MultipartResponseParsingInterceptor(),
-            JSONResponseParsingInterceptor()
-        ]
-    }
-}
-
-private struct RequestHeaderInterceptor: ApolloInterceptor {
-    var id: String = UUID().uuidString
-
-    private let defaultHeaders: [String: String]
-
-    init(defaultHeaders: [String: String]) {
-        self.defaultHeaders = defaultHeaders
-    }
-
-    func interceptAsync<Operation: GraphQLOperation>(
-        chain: RequestChain,
-        request: HTTPRequest<Operation>,
-        response: HTTPResponse<Operation>?,
-        completion: @escaping (Result<GraphQLResult<Operation.Data>, Error>) -> Void
-    ) {
-        defaultHeaders.forEach { request.addHeader(name: $0.key, value: $0.value) }
-        if let additionalHeaders = request.context as? RequestHeaders {
-            additionalHeaders.additionalHeaders.forEach { request.addHeader(name: $0.key, value: $0.value) }
-        }
-
-        chain.proceedAsync(request: request, response: response, interceptor: self, completion: completion)
-    }
-}
-
-
