@@ -1,6 +1,7 @@
 import Apollo
 import ApolloAPI
 import Foundation
+import os
 
 public protocol GraphQLAPIAdapterProtocol: AnyObject {
     /// Fetches a query from the server
@@ -37,9 +38,18 @@ public protocol GraphQLAPIAdapterProtocol: AnyObject {
 
 public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
     private let apollo: ApolloClientProtocol
+    private let debug: Bool
+
+    private lazy var logger: Logger = {
+        Logger(
+            subsystem: Bundle.main.bundleIdentifier!,
+            category: String(describing: GraphQLAPIAdapter.self)
+        )
+    }()
 
     public init(
         url: URL,
+        debug: Bool,
         urlSessionConfiguration: URLSessionConfiguration = .default,
         defaultHeaders: [String: String] = [:]
     ) {
@@ -53,6 +63,7 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
             endpointURL: url
         )
 
+        self.debug = debug
         self.apollo = ApolloClient(
             networkTransport: networkTransport,
             store: ApolloStore()
@@ -111,6 +122,12 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
             case .failure(let error):
                 resultHandler(.failure(GraphQLAPIAdapterError(error: error)))
             }
+        }
+    }
+
+    private func debugLog(_ message: String) {
+        if debug {
+            logger.debug(.init(stringLiteral: message))
         }
     }
 }
