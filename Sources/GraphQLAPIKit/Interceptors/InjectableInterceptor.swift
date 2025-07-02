@@ -3,11 +3,11 @@ import ApolloAPI
 
 public protocol InjectableInterceptor: ApolloInterceptor, Hashable {
     var placement: InterceptorPlacement { get }
-    var operationSpecific: (any GraphQLOperation.Type)? { get }
+    var specificOperations: [any GraphQLOperation.Type]? { get }
 }
 
 extension InjectableInterceptor {
-    var operationSpecific: (any GraphQLOperation.Type)? { nil }
+    var specificOperations: [any GraphQLOperation.Type]? { nil }
 
     public static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.id == rhs.id

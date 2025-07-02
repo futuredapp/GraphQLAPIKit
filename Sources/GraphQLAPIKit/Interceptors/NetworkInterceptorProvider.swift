@@ -18,11 +18,11 @@ struct NetworkInterceptorProvider: InterceptorProvider {
 
     func interceptors<Operation: GraphQLOperation>(for operation: Operation) -> [ApolloInterceptor] {
         interceptors.filter { interceptor in
-            guard let specificOperationType = interceptor.operationSpecific else {
+            guard let specificOperations = interceptor.specificOperations else {
                 return true
             }
 
-            return type(of: operation) == specificOperationType
+            return specificOperations.contains { $0 == type(of: operation) }
         }
     }
 
