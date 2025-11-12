@@ -10,6 +10,15 @@
       }
     },
     {
+      "identity" : "ftnetworktracer",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/futuredapp/FTNetworkTracer",
+      "state" : {
+        "revision" : "aa8e1def431839ae1ca353a70bc68314ea94b4f0",
+        "version" : "0.1.0"
+      }
+    },
+    {
       "identity" : "sqlite.swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/stephencelis/SQLite.swift.git",

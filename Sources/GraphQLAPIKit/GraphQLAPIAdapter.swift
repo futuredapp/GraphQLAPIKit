@@ -1,6 +1,7 @@
 import Apollo
 import ApolloAPI
 import Foundation
+import FTNetworkTracer
 
 public protocol GraphQLAPIAdapterProtocol: AnyObject {
     /// Fetches a query from the server
@@ -18,7 +19,7 @@ public protocol GraphQLAPIAdapterProtocol: AnyObject {
         queue: DispatchQueue,
         resultHandler: @escaping (Result<Query.Data, GraphQLAPIAdapterError>) -> Void
     ) -> Cancellable
-    
+
     /// Performs a mutation by sending it to the server.
     ///
     /// - Parameters:
@@ -37,11 +38,14 @@ public protocol GraphQLAPIAdapterProtocol: AnyObject {
 
 public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
     private let apollo: ApolloClientProtocol
+    private let networkTracer: FTNetworkTracer?
+    private let url: URL
 
     public init(
         url: URL,
         urlSessionConfiguration: URLSessionConfiguration = .default,
-        defaultHeaders: [String: String] = [:]
+        defaultHeaders: [String: String] = [:],
+        networkTracer: FTNetworkTracer? = nil
     ) {
         let provider = NetworkInterceptorProvider(
             client: URLSessionClient(sessionConfiguration: urlSessionConfiguration),
@@ -57,6 +61,9 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
             networkTransport: networkTransport,
             store: ApolloStore()
         )
+
+        self.networkTracer = networkTracer
+        self.url = url
     }
 
     public func fetch<Query>(
@@ -64,25 +71,63 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
         context: RequestHeaders?,
         queue: DispatchQueue,
         resultHandler: @escaping (Result<Query.Data, GraphQLAPIAdapterError>) -> Void
-    ) -> Cancellable where Query : GraphQLQuery {
-        apollo.fetch(
+    ) -> Cancellable where Query: GraphQLQuery {
+        let requestId = UUID().uuidString
+        let startTime = Date()
+
+        // Log and track request
+        networkTracer?.logAndTrackRequest(
+            url: url.absoluteString,
+            operationName: Query.operationName,
+            query: Query.definition?.queryDocument ?? "",
+            variables: query.__variables,
+            headers: context?.additionalHeaders,
+            requestId: requestId
+        )
+
+        return apollo.fetch(
             query: query,
             cachePolicy: .fetchIgnoringCacheCompletely,
             contextIdentifier: nil,
             context: context,
             queue: queue
-        ) { result in
+        ) { [weak self] result in
+            guard let self = self else { return }
+
             switch result {
-            case .success(let result):
+            case let .success(result):
+                // Log and track response
+                self.networkTracer?.logAndTrackResponse(
+                    url: self.url.absoluteString,
+                    operationName: Query.operationName,
+                    statusCode: nil, // We don't have access to status code here
+                    requestId: requestId,
+                    startTime: startTime
+                )
+
                 if let errors = result.errors {
-                    resultHandler(.failure(GraphQLAPIAdapterError(error: ApolloError(errors: errors))))
+                    let error = GraphQLAPIAdapterError(error: ApolloError(errors: errors))
+                    self.networkTracer?.logAndTrackError(
+                        url: self.url.absoluteString,
+                        operationName: Query.operationName,
+                        error: error,
+                        requestId: requestId
+                    )
+                    resultHandler(.failure(error))
                 } else if let data = result.data {
                     resultHandler(.success(data))
                 } else {
                     assertionFailure("Did not receive no data nor errors")
                 }
-            case .failure(let error):
-                resultHandler(.failure(GraphQLAPIAdapterError(error: error)))
+            case let .failure(error):
+                let adaptedError = GraphQLAPIAdapterError(error: error)
+                self.networkTracer?.logAndTrackError(
+                    url: self.url.absoluteString,
+                    operationName: Query.operationName,
+                    error: adaptedError,
+                    requestId: requestId
+                )
+                resultHandler(.failure(adaptedError))
             }
         }
     }
@@ -92,24 +137,62 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
         context: RequestHeaders?,
         queue: DispatchQueue,
         resultHandler: @escaping (Result<Mutation.Data, GraphQLAPIAdapterError>) -> Void
-    ) -> Cancellable where Mutation : GraphQLMutation {
-        apollo.perform(
+    ) -> Cancellable where Mutation: GraphQLMutation {
+        let requestId = UUID().uuidString
+        let startTime = Date()
+
+        // Log and track request
+        networkTracer?.logAndTrackRequest(
+            url: url.absoluteString,
+            operationName: Mutation.operationName,
+            query: Mutation.definition?.queryDocument ?? "",
+            variables: mutation.__variables,
+            headers: context?.additionalHeaders,
+            requestId: requestId
+        )
+
+        return apollo.perform(
             mutation: mutation,
             publishResultToStore: false,
             context: context,
             queue: queue
-        ) { result in
+        ) { [weak self] result in
+            guard let self = self else { return }
+
             switch result {
-            case .success(let result):
+            case let .success(result):
+                // Log and track response
+                self.networkTracer?.logAndTrackResponse(
+                    url: self.url.absoluteString,
+                    operationName: Mutation.operationName,
+                    statusCode: nil, // We don't have access to status code here
+                    requestId: requestId,
+                    startTime: startTime
+                )
+
                 if let errors = result.errors {
-                    resultHandler(.failure(GraphQLAPIAdapterError(error: ApolloError(errors: errors))))
+                    let error = GraphQLAPIAdapterError(error: ApolloError(errors: errors))
+                    self.networkTracer?.logAndTrackError(
+                        url: self.url.absoluteString,
+                        operationName: Mutation.operationName,
+                        error: error,
+                        requestId: requestId
+                    )
+                    resultHandler(.failure(error))
                 } else if let data = result.data {
                     resultHandler(.success(data))
                 } else {
                     assertionFailure("Did not receive no data nor errors")
                 }
             case .failure(let error):
-                resultHandler(.failure(GraphQLAPIAdapterError(error: error)))
+                let adaptedError = GraphQLAPIAdapterError(error: error)
+                self.networkTracer?.logAndTrackError(
+                    url: self.url.absoluteString,
+                    operationName: Mutation.operationName,
+                    error: adaptedError,
+                    requestId: requestId
+                )
+                resultHandler(.failure(adaptedError))
             }
         }
     }
@@ -159,5 +242,3 @@ private struct RequestHeaderInterceptor: ApolloInterceptor {
         chain.proceedAsync(request: request, response: response, interceptor: self, completion: completion)
     }
 }
-
-
