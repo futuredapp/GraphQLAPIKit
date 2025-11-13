@@ -14,8 +14,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/futuredapp/FTNetworkTracer",
       "state" : {
-        "revision" : "aa8e1def431839ae1ca353a70bc68314ea94b4f0",
-        "version" : "0.1.0"
+        "revision" : "5a236caa5d3257d03cf0e5380b49f9af8ff2c498",
+        "version" : "0.2.0"
       }
     },
     {

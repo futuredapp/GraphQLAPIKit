@@ -22,7 +22,7 @@ let package = Package(
             url: "https://github.com/apollographql/apollo-ios.git",
             exact: "1.17.0" // Do not forget to download related to this version Apollo CLI and include it with package
         ),
-        .package(url: "https://github.com/futuredapp/FTNetworkTracer", from: "0.1.0")
+        .package(url: "https://github.com/futuredapp/FTNetworkTracer", from: "0.2.0")
     ],
     targets: [
         .target(
