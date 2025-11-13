@@ -7,7 +7,7 @@ let package = Package(
     name: "GraphQLAPIKit",
     platforms: [
         .iOS(.v16),
-        .macOS(.v10_14)
+        .macOS(.v11)
     ],
     products: [
         .library(
