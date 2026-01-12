@@ -37,12 +37,6 @@ public protocol GraphQLAPIAdapterProtocol: AnyObject {
 
 public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
     private let apollo: ApolloClientProtocol
-    private let url: URL
-
-    /// Array of network observers for lifecycle callbacks.
-    /// Each observer receives notifications before requests are sent,
-    /// when responses are received, and when errors occur.
-    private let networkObservers: [any GraphQLNetworkObserver]
 
     public init(
         url: URL,
@@ -50,12 +44,12 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
         defaultHeaders: [String: String] = [:],
         networkObservers: [any GraphQLNetworkObserver] = []
     ) {
-        self.url = url
-        self.networkObservers = networkObservers
-
         let provider = NetworkInterceptorProvider(
             client: URLSessionClient(sessionConfiguration: urlSessionConfiguration),
-            defaultHeaders: defaultHeaders
+            defaultHeaders: defaultHeaders,
+            observerInterceptorFactory: {
+                networkObservers.map { ObserverInterceptor(observer: $0) }
+            }
         )
 
         let networkTransport = RequestChainNetworkTransport(
@@ -75,41 +69,24 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
         queue: DispatchQueue,
         resultHandler: @escaping (Result<Query.Data, GraphQLAPIAdapterError>) -> Void
     ) -> Cancellable where Query: GraphQLQuery {
-        // Create operation context for observers
-        let operationContext = GraphQLOperationContext(
-            operationName: Query.operationName,
-            operationType: "query",
-            url: url
-        )
-
-        // Create tokens that call willSendRequest immediately
-        let tokens = networkObservers.map { GraphQLRequestToken(observer: $0, context: operationContext) }
-
-        return apollo.fetch(
+        apollo.fetch(
             query: query,
             cachePolicy: .fetchIgnoringCacheCompletely,
             contextIdentifier: nil,
             context: context,
             queue: queue
         ) { result in
-            // Notify observers about response
-            tokens.forEach { $0.didReceiveResponse(nil, nil) }
-
             switch result {
             case .success(let result):
                 if let errors = result.errors {
-                    let error = GraphQLAPIAdapterError(error: ApolloError(errors: errors))
-                    tokens.forEach { $0.didFail(error) }
-                    resultHandler(.failure(error))
+                    resultHandler(.failure(GraphQLAPIAdapterError(error: ApolloError(errors: errors))))
                 } else if let data = result.data {
                     resultHandler(.success(data))
                 } else {
                     assertionFailure("Did not receive no data nor errors")
                 }
             case .failure(let error):
-                let adapterError = GraphQLAPIAdapterError(error: error)
-                tokens.forEach { $0.didFail(adapterError) }
-                resultHandler(.failure(adapterError))
+                resultHandler(.failure(GraphQLAPIAdapterError(error: error)))
             }
         }
     }
@@ -120,65 +97,59 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
         queue: DispatchQueue,
         resultHandler: @escaping (Result<Mutation.Data, GraphQLAPIAdapterError>) -> Void
     ) -> Cancellable where Mutation: GraphQLMutation {
-        // Create operation context for observers
-        let operationContext = GraphQLOperationContext(
-            operationName: Mutation.operationName,
-            operationType: "mutation",
-            url: url
-        )
-
-        // Create tokens that call willSendRequest immediately
-        let tokens = networkObservers.map { GraphQLRequestToken(observer: $0, context: operationContext) }
-
-        return apollo.perform(
+        apollo.perform(
             mutation: mutation,
             publishResultToStore: false,
             context: context,
             queue: queue
         ) { result in
-            // Notify observers about response
-            tokens.forEach { $0.didReceiveResponse(nil, nil) }
-
             switch result {
             case .success(let result):
                 if let errors = result.errors {
-                    let error = GraphQLAPIAdapterError(error: ApolloError(errors: errors))
-                    tokens.forEach { $0.didFail(error) }
-                    resultHandler(.failure(error))
+                    resultHandler(.failure(GraphQLAPIAdapterError(error: ApolloError(errors: errors))))
                 } else if let data = result.data {
                     resultHandler(.success(data))
                 } else {
                     assertionFailure("Did not receive no data nor errors")
                 }
             case .failure(let error):
-                let adapterError = GraphQLAPIAdapterError(error: error)
-                tokens.forEach { $0.didFail(adapterError) }
-                resultHandler(.failure(adapterError))
+                resultHandler(.failure(GraphQLAPIAdapterError(error: error)))
             }
         }
     }
 }
 
+// MARK: - Network Interceptor Provider
+
 private struct NetworkInterceptorProvider: InterceptorProvider {
     private let client: URLSessionClient
     private let defaultHeaders: [String: String]
+    private let observerInterceptorFactory: () -> [ApolloInterceptor]
 
-    init(client: URLSessionClient, defaultHeaders: [String: String]) {
+    init(
+        client: URLSessionClient,
+        defaultHeaders: [String: String],
+        observerInterceptorFactory: @escaping () -> [ApolloInterceptor]
+    ) {
         self.client = client
         self.defaultHeaders = defaultHeaders
+        self.observerInterceptorFactory = observerInterceptorFactory
     }
 
     func interceptors<Operation: GraphQLOperation>(for operation: Operation) -> [ApolloInterceptor] {
-        [
+        // Observer interceptors first, then the standard chain
+        observerInterceptorFactory() + [
             RequestHeaderInterceptor(defaultHeaders: defaultHeaders),
             MaxRetryInterceptor(),
-            NetworkFetchInterceptor(client: self.client),
+            NetworkFetchInterceptor(client: client),
             ResponseCodeInterceptor(),
             MultipartResponseParsingInterceptor(),
             JSONResponseParsingInterceptor()
         ]
     }
 }
+
+// MARK: - Request Header Interceptor
 
 private struct RequestHeaderInterceptor: ApolloInterceptor {
     var id: String = UUID().uuidString

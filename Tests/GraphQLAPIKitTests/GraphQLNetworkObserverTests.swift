@@ -3,41 +3,6 @@ import XCTest
 
 final class GraphQLNetworkObserverTests: XCTestCase {
 
-    // MARK: - GraphQLOperationContext Tests
-
-    func testOperationContextInitialization() {
-        let url = URL(string: "https://api.example.com/graphql")!
-        let context = GraphQLOperationContext(
-            operationName: "GetUser",
-            operationType: "query",
-            url: url
-        )
-
-        XCTAssertEqual(context.operationName, "GetUser")
-        XCTAssertEqual(context.operationType, "query")
-        XCTAssertEqual(context.url, url)
-    }
-
-    func testOperationContextSendable() {
-        // Verify GraphQLOperationContext can be sent across actors
-        let url = URL(string: "https://api.example.com/graphql")!
-        let context = GraphQLOperationContext(
-            operationName: "CreatePost",
-            operationType: "mutation",
-            url: url
-        )
-
-        Task {
-            // This should compile without issues if Sendable conformance is correct
-            await verifyContextOnAnotherActor(context)
-        }
-    }
-
-    @MainActor
-    private func verifyContextOnAnotherActor(_ context: GraphQLOperationContext) async {
-        XCTAssertEqual(context.operationType, "mutation")
-    }
-
     // MARK: - MockObserver
 
     final class MockObserver: GraphQLNetworkObserver {
@@ -50,135 +15,108 @@ final class GraphQLNetworkObserverTests: XCTestCase {
         var didReceiveResponseCalled = false
         var didFailCalled = false
 
-        var lastOperationContext: GraphQLOperationContext?
+        var lastRequest: URLRequest?
         var lastResponse: HTTPURLResponse?
         var lastData: Data?
         var lastError: Error?
 
-        func willSendRequest(_ context: GraphQLOperationContext) -> Context {
+        func willSendRequest(_ request: URLRequest) -> Context {
             willSendRequestCalled = true
-            lastOperationContext = context
+            lastRequest = request
             return Context(requestId: UUID().uuidString, startTime: Date())
         }
 
         func didReceiveResponse(
-            for context: GraphQLOperationContext,
+            for request: URLRequest,
             response: HTTPURLResponse?,
             data: Data?,
-            observerContext: Context
+            context: Context
         ) {
             didReceiveResponseCalled = true
             lastResponse = response
             lastData = data
         }
 
-        func didFail(for context: GraphQLOperationContext, error: Error, observerContext: Context) {
+        func didFail(request: URLRequest, error: Error, context: Context) {
             didFailCalled = true
             lastError = error
         }
     }
 
-    // MARK: - GraphQLRequestToken Tests
+    // MARK: - ObserverInterceptor Tests
 
-    func testRequestTokenCallsWillSendRequestImmediately() {
+    func testObserverInterceptorCreation() {
         let observer = MockObserver()
-        let context = GraphQLOperationContext(
-            operationName: "TestQuery",
-            operationType: "query",
-            url: URL(string: "https://example.com")!
-        )
+        let interceptor = ObserverInterceptor(observer: observer)
 
+        XCTAssertNotNil(interceptor.id)
         XCTAssertFalse(observer.willSendRequestCalled)
-
-        _ = GraphQLRequestToken(observer: observer, context: context)
-
-        XCTAssertTrue(observer.willSendRequestCalled)
-        XCTAssertEqual(observer.lastOperationContext?.operationName, "TestQuery")
     }
 
-    func testRequestTokenDidReceiveResponse() {
-        let observer = MockObserver()
-        let context = GraphQLOperationContext(
-            operationName: "TestQuery",
-            operationType: "query",
-            url: URL(string: "https://example.com")!
-        )
-
-        let token = GraphQLRequestToken(observer: observer, context: context)
-
-        XCTAssertFalse(observer.didReceiveResponseCalled)
-
-        token.didReceiveResponse(nil, nil)
-
-        XCTAssertTrue(observer.didReceiveResponseCalled)
-    }
-
-    func testRequestTokenDidFail() {
-        let observer = MockObserver()
-        let context = GraphQLOperationContext(
-            operationName: "TestMutation",
-            operationType: "mutation",
-            url: URL(string: "https://example.com")!
-        )
-
-        let token = GraphQLRequestToken(observer: observer, context: context)
-
-        XCTAssertFalse(observer.didFailCalled)
-
-        let testError = NSError(domain: "Test", code: 123)
-        token.didFail(testError)
-
-        XCTAssertTrue(observer.didFailCalled)
-        XCTAssertNotNil(observer.lastError)
-    }
-
-    func testRequestTokenWeakReference() {
+    func testObserverWeakReference() {
         var observer: MockObserver? = MockObserver()
-        let context = GraphQLOperationContext(
-            operationName: "TestQuery",
-            operationType: "query",
-            url: URL(string: "https://example.com")!
-        )
-
-        let token = GraphQLRequestToken(observer: observer!, context: context)
-
-        XCTAssertTrue(observer!.willSendRequestCalled)
+        let interceptor = ObserverInterceptor(observer: observer!)
 
         // Release the observer
         observer = nil
 
-        // Token should not crash when observer is deallocated
-        token.didReceiveResponse(nil, nil)
-        token.didFail(NSError(domain: "Test", code: 0))
+        // Interceptor should not crash when observer is deallocated
+        // (notifyFailure should safely do nothing)
+        interceptor.notifyFailure(NSError(domain: "Test", code: 0))
     }
 
     // MARK: - Multiple Observers Tests
 
-    func testMultipleObserversAllReceiveCallbacks() {
+    func testMultipleInterceptorsCreation() {
         let observer1 = MockObserver()
         let observer2 = MockObserver()
         let observer3 = MockObserver()
 
-        let context = GraphQLOperationContext(
-            operationName: "MultiTest",
-            operationType: "query",
-            url: URL(string: "https://example.com")!
-        )
-
-        let tokens = [observer1, observer2, observer3].map {
-            GraphQLRequestToken(observer: $0, context: context)
+        let interceptors = [observer1, observer2, observer3].map {
+            ObserverInterceptor(observer: $0)
         }
 
-        // All should have willSendRequest called
-        XCTAssertTrue(observer1.willSendRequestCalled)
-        XCTAssertTrue(observer2.willSendRequestCalled)
-        XCTAssertTrue(observer3.willSendRequestCalled)
+        XCTAssertEqual(interceptors.count, 3)
 
-        // Call didReceiveResponse on all
-        tokens.forEach { $0.didReceiveResponse(nil, nil) }
+        // All should have unique IDs
+        let ids = Set(interceptors.map { $0.id })
+        XCTAssertEqual(ids.count, 3)
+    }
 
-        XCTAssertTrue(observer1.didReceiveResponseCalled)
-        XCTAssertTrue(observer2.didReceiveResponseCalled)
-        XCTAssertTrue(observer3.didReceiveResponseCalled)
+    // MARK: - Protocol Conformance Tests
+
+    func testProtocolMethodSignatures() {
+        // This test verifies the protocol matches FTAPIKit's NetworkObserver pattern
+        let observer = MockObserver()
+
+        // Create a sample URLRequest
+        let request = URLRequest(url: URL(string: "https://example.com/graphql")!)
+
+        // Test willSendRequest returns Context
+        let context = observer.willSendRequest(request)
+        XCTAssertTrue(observer.willSendRequestCalled)
+        XCTAssertNotNil(context.requestId)
+
+        // Test didReceiveResponse
+        observer.didReceiveResponse(for: request, response: nil, data: nil, context: context)
+        XCTAssertTrue(observer.didReceiveResponseCalled)
+
+        // Test didFail
+        observer.didFail(request: request, error: NSError(domain: "Test", code: 1), context: context)
+        XCTAssertTrue(observer.didFailCalled)
+    }
+
+    func testURLRequestPassedCorrectly() {
+        let observer = MockObserver()
+        let url = URL(string: "https://api.example.com/graphql")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        _ = observer.willSendRequest(request)
+
+        XCTAssertEqual(observer.lastRequest?.url, url)
+        XCTAssertEqual(observer.lastRequest?.httpMethod, "POST")
+        XCTAssertEqual(observer.lastRequest?.value(forHTTPHeaderField: "Content-Type"), "application/json")
     }
 }
