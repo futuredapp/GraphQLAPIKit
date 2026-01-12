@@ -122,7 +122,7 @@ final class IntegrationMockObserver: GraphQLNetworkObserver {
     }
 
     var capturedRequests: [URLRequest] = []
-    var capturedResponses: [(response: HTTPURLResponse?, data: Data?)] = []
+    var capturedResponses: [(response: URLResponse?, data: Data?)] = []
     var capturedErrors: [Error] = []
 
     func willSendRequest(_ request: URLRequest) -> Context {
@@ -130,7 +130,7 @@ final class IntegrationMockObserver: GraphQLNetworkObserver {
         return Context(timestamp: Date())
     }
 
-    func didReceiveResponse(for request: URLRequest, response: HTTPURLResponse?, data: Data?, context: Context) {
+    func didReceiveResponse(for request: URLRequest, response: URLResponse?, data: Data?, context: Context) {
         capturedResponses.append((response, data))
     }
 

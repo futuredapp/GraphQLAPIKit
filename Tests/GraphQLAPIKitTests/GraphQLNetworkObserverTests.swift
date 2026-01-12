@@ -16,7 +16,7 @@ final class GraphQLNetworkObserverTests: XCTestCase {
         var didFailCalled = false
 
         var lastRequest: URLRequest?
-        var lastResponse: HTTPURLResponse?
+        var lastResponse: URLResponse?
         var lastData: Data?
         var lastError: Error?
 
@@ -28,7 +28,7 @@ final class GraphQLNetworkObserverTests: XCTestCase {
 
         func didReceiveResponse(
             for request: URLRequest,
-            response: HTTPURLResponse?,
+            response: URLResponse?,
             data: Data?,
             context: Context
         ) {

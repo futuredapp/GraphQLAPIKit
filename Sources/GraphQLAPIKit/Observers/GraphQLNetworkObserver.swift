@@ -30,10 +30,10 @@ public protocol GraphQLNetworkObserver: AnyObject, Sendable {
     /// This allows observers to inspect the actual response for debugging purposes.
     /// - Parameters:
     ///   - request: The original request
-    ///   - response: The HTTP response (may be nil if network error occurred before response)
+    ///   - response: The URL response (may be nil if network error occurred before response)
     ///   - data: Response body data, if any
     ///   - context: Value returned from `willSendRequest`
-    func didReceiveResponse(for request: URLRequest, response: HTTPURLResponse?, data: Data?, context: Context)
+    func didReceiveResponse(for request: URLRequest, response: URLResponse?, data: Data?, context: Context)
 
     /// Called when a request fails with an error.
     ///

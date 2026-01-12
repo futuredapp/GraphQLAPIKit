@@ -11,12 +11,12 @@ final class ObserverInterceptor: ApolloInterceptor, @unchecked Sendable {
     let id = UUID().uuidString
 
     /// Handlers set on first call, capturing URLRequest and Context in closures
-    private var didReceiveResponse: ((HTTPURLResponse?, Data?) -> Void)?
+    private var didReceiveResponse: ((URLResponse?, Data?) -> Void)?
     private var didFail: ((Error) -> Void)?
 
     /// Factory that creates the handlers - captures the observer with its concrete type
     private let createHandlers: (URLRequest) -> (
-        didReceiveResponse: (HTTPURLResponse?, Data?) -> Void,
+        didReceiveResponse: (URLResponse?, Data?) -> Void,
         didFail: (Error) -> Void
     )
 
@@ -28,7 +28,7 @@ final class ObserverInterceptor: ApolloInterceptor, @unchecked Sendable {
             let context = observer.willSendRequest(urlRequest)
 
             // Create handlers that capture urlRequest and context immutably
-            let didReceiveResponse: (HTTPURLResponse?, Data?) -> Void = { [weak observer] response, data in
+            let didReceiveResponse: (URLResponse?, Data?) -> Void = { [weak observer] response, data in
                 observer?.didReceiveResponse(for: urlRequest, response: response, data: data, context: context)
             }
 
