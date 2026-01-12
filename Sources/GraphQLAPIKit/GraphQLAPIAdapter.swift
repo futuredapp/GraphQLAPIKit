@@ -137,15 +137,16 @@ private struct NetworkInterceptorProvider: InterceptorProvider {
     }
 
     func interceptors<Operation: GraphQLOperation>(for operation: Operation) -> [ApolloInterceptor] {
-        // Observer interceptors first, then the standard chain
-        observerInterceptorFactory() + [
-            RequestHeaderInterceptor(defaultHeaders: defaultHeaders),
-            MaxRetryInterceptor(),
-            NetworkFetchInterceptor(client: client),
-            ResponseCodeInterceptor(),
-            MultipartResponseParsingInterceptor(),
-            JSONResponseParsingInterceptor()
-        ]
+        // Headers first, then observers (so they see final URLRequest), then network chain
+        [RequestHeaderInterceptor(defaultHeaders: defaultHeaders)]
+            + observerInterceptorFactory()
+            + [
+                MaxRetryInterceptor(),
+                NetworkFetchInterceptor(client: client),
+                ResponseCodeInterceptor(),
+                MultipartResponseParsingInterceptor(),
+                JSONResponseParsingInterceptor()
+            ]
     }
 }
 
