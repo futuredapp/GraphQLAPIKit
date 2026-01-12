@@ -47,22 +47,21 @@ final class GraphQLNetworkObserverTests: XCTestCase {
 
     func testObserverInterceptorCreation() {
         let observer = MockObserver()
-        let interceptor = ObserverInterceptor(observer: observer)
+        let contextStore = ObserverContextStore<MockObserver.Context>()
+        let interceptor = ObserverInterceptor(observer: observer, contextStore: contextStore)
 
         XCTAssertNotNil(interceptor.id)
         XCTAssertFalse(observer.willSendRequestCalled)
     }
 
-    func testObserverWeakReference() {
-        var observer: MockObserver? = MockObserver()
-        let interceptor = ObserverInterceptor(observer: observer!)
+    func testPairedInterceptorCreation() {
+        let observer = MockObserver()
+        let contextStore = ObserverContextStore<MockObserver.Context>()
+        let beforeInterceptor = ObserverInterceptor(observer: observer, contextStore: contextStore)
+        let afterInterceptor = ObserverInterceptor(observer: observer, contextStore: contextStore)
 
-        // Release the observer
-        observer = nil
-
-        // Interceptor should not crash when observer is deallocated
-        // (notifyFailure should safely do nothing)
-        interceptor.notifyFailure(NSError(domain: "Test", code: 0))
+        // Both should have unique IDs
+        XCTAssertNotEqual(beforeInterceptor.id, afterInterceptor.id)
     }
 
     // MARK: - Multiple Observers Tests
@@ -72,8 +71,9 @@ final class GraphQLNetworkObserverTests: XCTestCase {
         let observer2 = MockObserver()
         let observer3 = MockObserver()
 
-        let interceptors = [observer1, observer2, observer3].map {
-            ObserverInterceptor(observer: $0)
+        let interceptors = [observer1, observer2, observer3].map { (observer: MockObserver) in
+            let contextStore = ObserverContextStore<MockObserver.Context>()
+            return ObserverInterceptor(observer: observer, contextStore: contextStore)
         }
 
         XCTAssertEqual(interceptors.count, 3)
@@ -205,5 +205,42 @@ final class GraphQLNetworkObserverTests: XCTestCase {
         // Verify observer sees both default and context headers
         XCTAssertEqual(observer.lastRequest?.value(forHTTPHeaderField: "X-Default-Header"), "default-value")
         XCTAssertEqual(observer.lastRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer context-token")
+    }
+
+    // MARK: - Context Store Tests
+
+    func testContextStoreAndRetrieve() async {
+        let store = ObserverContextStore<String>()
+
+        await store.store("test-context", for: "request-1")
+        let retrieved = await store.retrieve(for: "request-1")
+
+        XCTAssertEqual(retrieved, "test-context")
+    }
+
+    func testContextStoreRetrieveRemovesContext() async {
+        let store = ObserverContextStore<String>()
+
+        await store.store("test-context", for: "request-1")
+        _ = await store.retrieve(for: "request-1")
+        let secondRetrieve = await store.retrieve(for: "request-1")
+
+        XCTAssertNil(secondRetrieve)
+    }
+
+    func testContextStoreMultipleContexts() async {
+        let store = ObserverContextStore<Int>()
+
+        await store.store(1, for: "request-1")
+        await store.store(2, for: "request-2")
+        await store.store(3, for: "request-3")
+
+        let context2 = await store.retrieve(for: "request-2")
+        let context1 = await store.retrieve(for: "request-1")
+        let context3 = await store.retrieve(for: "request-3")
+
+        XCTAssertEqual(context1, 1)
+        XCTAssertEqual(context2, 2)
+        XCTAssertEqual(context3, 3)
     }
 }

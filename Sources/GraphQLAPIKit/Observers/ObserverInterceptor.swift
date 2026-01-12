@@ -2,42 +2,19 @@ import Apollo
 import ApolloAPI
 import Foundation
 
-/// Internal interceptor that observes network requests for a single observer.
-///
-/// One interceptor per observer (1:1 relationship), matching FTAPIKit's RequestToken pattern.
-/// Uses closure capture to store URLRequest and Context immutably - type erasure happens
-/// at closure creation time.
-final class ObserverInterceptor: ApolloInterceptor, @unchecked Sendable {
+/// Interceptor that observes network requests. Place TWO instances in chain:
+/// - One BEFORE NetworkFetchInterceptor (captures request timing)
+/// - One AFTER NetworkFetchInterceptor (captures response)
+/// Both instances share state via the contextStore actor.
+final class ObserverInterceptor<Observer: GraphQLNetworkObserver>: ApolloInterceptor, @unchecked Sendable {
     let id = UUID().uuidString
 
-    /// Handlers set on first call, capturing URLRequest and Context in closures
-    private var didReceiveResponse: ((URLResponse?, Data?) -> Void)?
-    private var didFail: ((Error) -> Void)?
+    private let observer: Observer
+    private let contextStore: ObserverContextStore<Observer.Context>
 
-    /// Factory that creates the handlers - captures the observer with its concrete type
-    private let createHandlers: (URLRequest) -> (
-        didReceiveResponse: (URLResponse?, Data?) -> Void,
-        didFail: (Error) -> Void
-    )
-
-    /// Creates an interceptor for the given observer.
-    /// The generic initializer captures the concrete Observer type and its Context.
-    init<Observer: GraphQLNetworkObserver>(observer: Observer) {
-        self.createHandlers = { urlRequest in
-            // Call willSendRequest and capture context
-            let context = observer.willSendRequest(urlRequest)
-
-            // Create handlers that capture urlRequest and context immutably
-            let didReceiveResponse: (URLResponse?, Data?) -> Void = { [weak observer] response, data in
-                observer?.didReceiveResponse(for: urlRequest, response: response, data: data, context: context)
-            }
-
-            let didFail: (Error) -> Void = { [weak observer] error in
-                observer?.didFail(request: urlRequest, error: error, context: context)
-            }
-
-            return (didReceiveResponse, didFail)
-        }
+    init(observer: Observer, contextStore: ObserverContextStore<Observer.Context>) {
+        self.observer = observer
+        self.contextStore = contextStore
     }
 
     func interceptAsync<Operation: GraphQLOperation>(
@@ -46,23 +23,52 @@ final class ObserverInterceptor: ApolloInterceptor, @unchecked Sendable {
         response: HTTPResponse<Operation>?,
         completion: @escaping (Result<GraphQLResult<Operation.Data>, Error>) -> Void
     ) {
-        if response == nil {
-            // Before network fetch - create handlers with captured context
-            if let urlRequest = try? request.toURLRequest() {
-                let handlers = createHandlers(urlRequest)
-                didReceiveResponse = handlers.didReceiveResponse
-                didFail = handlers.didFail
-            }
-        } else {
-            // After network fetch - invoke captured closure
-            didReceiveResponse?(response?.httpResponse, response?.rawData)
+        guard let urlRequest = try? request.toURLRequest() else {
+            chain.proceedAsync(request: request, response: response, interceptor: self, completion: completion)
+            return
         }
 
-        chain.proceedAsync(request: request, response: response, interceptor: self, completion: completion)
-    }
+        let requestId = urlRequest.hashValue.description
 
-    /// Called when the operation fails
-    func notifyFailure(_ error: Error) {
-        didFail?(error)
+        if response == nil {
+            // BEFORE network fetch - call willSendRequest and store context
+            let context = observer.willSendRequest(urlRequest)
+            Task {
+                await contextStore.store(context, for: requestId)
+            }
+        } else {
+            // AFTER network fetch - retrieve context and call didReceiveResponse
+            Task { [weak self] in
+                guard let self,
+                      let context = await contextStore.retrieve(for: requestId) else {
+                    return
+                }
+                self.observer.didReceiveResponse(
+                    for: urlRequest,
+                    response: response?.httpResponse,
+                    data: response?.rawData,
+                    context: context
+                )
+            }
+        }
+
+        // Wrap completion to handle errors
+        let wrappedCompletion: (Result<GraphQLResult<Operation.Data>, Error>) -> Void = { [weak self] result in
+            if case .failure(let error) = result {
+                Task {
+                    guard let self,
+                          let context = await self.contextStore.retrieve(for: requestId) else {
+                        completion(result)
+                        return
+                    }
+                    self.observer.didFail(request: urlRequest, error: error, context: context)
+                    completion(result)
+                }
+                return
+            }
+            completion(result)
+        }
+
+        chain.proceedAsync(request: request, response: response, interceptor: self, completion: wrappedCompletion)
     }
 }

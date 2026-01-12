@@ -47,9 +47,7 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
         let provider = NetworkInterceptorProvider(
             client: URLSessionClient(sessionConfiguration: urlSessionConfiguration),
             defaultHeaders: defaultHeaders,
-            observerInterceptorFactory: {
-                networkObservers.map { ObserverInterceptor(observer: $0) }
-            }
+            networkObservers: networkObservers
         )
 
         let networkTransport = RequestChainNetworkTransport(
@@ -124,29 +122,43 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
 private struct NetworkInterceptorProvider: InterceptorProvider {
     private let client: URLSessionClient
     private let defaultHeaders: [String: String]
-    private let observerInterceptorFactory: () -> [ApolloInterceptor]
+    private let pairOfObserverInterceptors: [(before: ApolloInterceptor, after: ApolloInterceptor)]
 
     init(
         client: URLSessionClient,
         defaultHeaders: [String: String],
-        observerInterceptorFactory: @escaping () -> [ApolloInterceptor]
+        networkObservers: [any GraphQLNetworkObserver]
     ) {
         self.client = client
         self.defaultHeaders = defaultHeaders
-        self.observerInterceptorFactory = observerInterceptorFactory
+        // Create interceptor pairs with shared context stores
+        self.pairOfObserverInterceptors = networkObservers.map { Self.makePair(of: $0) }
+
     }
 
     func interceptors<Operation: GraphQLOperation>(for operation: Operation) -> [ApolloInterceptor] {
-        // Headers first, then observers (so they see final URLRequest), then network chain
-        [RequestHeaderInterceptor(defaultHeaders: defaultHeaders)]
-            + observerInterceptorFactory()
-            + [
-                MaxRetryInterceptor(),
-                NetworkFetchInterceptor(client: client),
-                ResponseCodeInterceptor(),
-                MultipartResponseParsingInterceptor(),
-                JSONResponseParsingInterceptor()
-            ]
+        // Headers first, then before-observers, then network fetch, then after-observers
+        [
+            RequestHeaderInterceptor(defaultHeaders: defaultHeaders),
+        ]
+        + pairOfObserverInterceptors.map(\.before)  // Before network - captures timing
+        + [
+            MaxRetryInterceptor(),
+            NetworkFetchInterceptor(client: client)
+        ]
+        + pairOfObserverInterceptors.map(\.after)   // After network - captures response
+        + [
+            ResponseCodeInterceptor(),
+            MultipartResponseParsingInterceptor(),
+            JSONResponseParsingInterceptor()
+        ]
+    }
+    
+    static private func makePair<T: GraphQLNetworkObserver>(of observer: T) -> (before: ApolloInterceptor, after: ApolloInterceptor) {
+        let contextStore = ObserverContextStore<T.Context>()
+        let beforeInterceptor = ObserverInterceptor(observer: observer, contextStore: contextStore)
+        let afterInterceptor = ObserverInterceptor(observer: observer, contextStore: contextStore)
+        return (before: beforeInterceptor, after: afterInterceptor)
     }
 }
 
