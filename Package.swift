@@ -29,6 +29,12 @@ let package = Package(
             dependencies: [
                 .product(name: "Apollo", package: "apollo-ios"),
             ]
+        ),
+        .testTarget(
+            name: "GraphQLAPIKitTests",
+            dependencies: [
+                "GraphQLAPIKit"
+            ]
         )
     ]
 )
