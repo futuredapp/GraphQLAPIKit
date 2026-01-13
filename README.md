@@ -3,10 +3,20 @@
 Lightweight GraphQL API client based on [Apollo iOS](https://github.com/apollographql/apollo-ios).
 Developed to simplify [Futured](https://www.futured.app) in-house development of applications, that work with GraphQL APIs.
 
+## Requirements
+
+- iOS 16.0+ / macOS 13.0+
+- Swift 5.9+
+- Apollo iOS 1.17.0
+
+## Limitations
+
 Currently there is no support for some Apollo's features:
 - Apollo built-in cache
 - GraphQL subscriptions
 - Custom interceptors
+
+Network observers are available for logging and analytics.
 
 ## Installation
 
@@ -110,7 +120,9 @@ let mutation = MyExampleMutation()
 import GraphQLAPIKit
 import GraphQLGenerated
 
-let apiAdapter = GraphQLAPIAdapter(url: URL(string: "https://MyAPIUrl.com")!)
+let apiAdapter = GraphQLAPIAdapter(
+    url: URL(string: "https://api.example.com/graphql")!
+)
 let queryResult = await apiAdapter.fetch(query: query)
 let mutationResult = await apiAdapter.perform(mutation: mutation)
 ```
