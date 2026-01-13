@@ -175,7 +175,7 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
             url: URL(string: "https://api.example.com/graphql")!,
             urlSessionConfiguration: mockSessionConfiguration(),
             defaultHeaders: defaultHeaders,
-            networkObservers: [observer]
+            networkObservers: observer
         )
 
         _ = adapter.fetch(query: MockQuery(), context: nil, queue: .main) { _ in
@@ -210,7 +210,7 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
             url: URL(string: "https://api.example.com/graphql")!,
             urlSessionConfiguration: mockSessionConfiguration(),
             defaultHeaders: [:],
-            networkObservers: [observer]
+            networkObservers: observer
         )
 
         _ = adapter.fetch(query: MockQuery(), context: contextHeaders, queue: .main) { _ in
@@ -249,7 +249,7 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
             url: URL(string: "https://api.example.com/graphql")!,
             urlSessionConfiguration: mockSessionConfiguration(),
             defaultHeaders: defaultHeaders,
-            networkObservers: [observer]
+            networkObservers: observer
         )
 
         _ = adapter.fetch(query: MockQuery(), context: contextHeaders, queue: .main) { _ in
@@ -285,7 +285,7 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
             url: URL(string: "https://api.example.com/graphql")!,
             urlSessionConfiguration: mockSessionConfiguration(),
             defaultHeaders: defaultHeaders,
-            networkObservers: [observer1, observer2, observer3]
+            networkObservers: observer1, observer2, observer3
         )
 
         _ = adapter.fetch(query: MockQuery(), context: nil, queue: .main) { _ in
@@ -322,7 +322,7 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
             url: URL(string: "https://api.example.com/graphql")!,
             urlSessionConfiguration: mockSessionConfiguration(),
             defaultHeaders: [:],
-            networkObservers: [observer]
+            networkObservers: observer
         )
 
         _ = adapter.fetch(query: MockQuery(), context: nil, queue: .main) { _ in

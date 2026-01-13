@@ -38,11 +38,37 @@ public protocol GraphQLAPIAdapterProtocol: AnyObject {
 public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
     private let apollo: ApolloClientProtocol
 
+    public init<each Observer: GraphQLNetworkObserver>(
+        url: URL,
+        urlSessionConfiguration: URLSessionConfiguration = .default,
+        defaultHeaders: [String: String] = [:],
+        networkObservers: repeat each Observer
+    ) {
+        var observers: [any GraphQLNetworkObserver] = []
+        repeat observers.append(each networkObservers)
+
+        let provider = NetworkInterceptorProvider(
+            client: URLSessionClient(sessionConfiguration: urlSessionConfiguration),
+            defaultHeaders: defaultHeaders,
+            networkObservers: observers
+        )
+
+        let networkTransport = RequestChainNetworkTransport(
+            interceptorProvider: provider,
+            endpointURL: url
+        )
+
+        self.apollo = ApolloClient(
+            networkTransport: networkTransport,
+            store: ApolloStore()
+        )
+    }
+
     public init(
         url: URL,
         urlSessionConfiguration: URLSessionConfiguration = .default,
         defaultHeaders: [String: String] = [:],
-        networkObservers: [any GraphQLNetworkObserver] = []
+        networkObservers: [any GraphQLNetworkObserver]
     ) {
         let provider = NetworkInterceptorProvider(
             client: URLSessionClient(sessionConfiguration: urlSessionConfiguration),
