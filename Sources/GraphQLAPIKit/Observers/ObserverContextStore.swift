@@ -1,15 +1,16 @@
 import Foundation
+import os
 
-/// Actor that stores observer contexts keyed by request identifier.
+/// Thread-safe store for observer contexts keyed by request identifier.
 /// Enables two interceptor instances to share state across the interceptor chain.
-actor ObserverContextStore<Context> {
-    private var contexts: [String: Context] = [:]
+final class ObserverContextStore<Context: Sendable>: Sendable {
+    private let state = OSAllocatedUnfairLock(initialState: [String: Context]())
 
     func store(_ context: Context, for requestId: String) {
-        contexts[requestId] = context
+        state.withLock { $0[requestId] = context }
     }
 
     func retrieve(for requestId: String) -> Context? {
-        contexts.removeValue(forKey: requestId)
+        state.withLock { $0.removeValue(forKey: requestId) }
     }
 }

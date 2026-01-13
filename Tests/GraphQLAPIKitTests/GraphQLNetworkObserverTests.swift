@@ -87,25 +87,25 @@ final class GraphQLNetworkObserverTests: XCTestCase {
 
     // MARK: - Context Store Tests
 
-    func testContextStoreOperations() async {
+    func testContextStoreOperations() {
         let store = ObserverContextStore<String>()
 
         // Test store and retrieve
-        await store.store("context-1", for: "request-1")
-        await store.store("context-2", for: "request-2")
-        await store.store("context-3", for: "request-3")
+        store.store("context-1", for: "request-1")
+        store.store("context-2", for: "request-2")
+        store.store("context-3", for: "request-3")
 
         // Retrieve in different order
-        let context2 = await store.retrieve(for: "request-2")
-        let context1 = await store.retrieve(for: "request-1")
-        let context3 = await store.retrieve(for: "request-3")
+        let context2 = store.retrieve(for: "request-2")
+        let context1 = store.retrieve(for: "request-1")
+        let context3 = store.retrieve(for: "request-3")
 
         XCTAssertEqual(context1, "context-1")
         XCTAssertEqual(context2, "context-2")
         XCTAssertEqual(context3, "context-3")
 
         // Verify retrieve removes context
-        let secondRetrieve = await store.retrieve(for: "request-1")
+        let secondRetrieve = store.retrieve(for: "request-1")
         XCTAssertNil(secondRetrieve)
     }
 }

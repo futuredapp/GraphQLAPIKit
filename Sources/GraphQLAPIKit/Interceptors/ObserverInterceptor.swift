@@ -31,17 +31,12 @@ struct ObserverInterceptor<Observer: GraphQLNetworkObserver>: ApolloInterceptor 
         let requestId = urlRequest.hashValue.description
 
         if response == nil {
-            // BEFORE network fetch - call willSendRequest and store context
+            // BEFORE network fetch - call willSendRequest and store context synchronously
             let context = observer.willSendRequest(urlRequest)
-            Task {
-                await contextStore.store(context, for: requestId)
-            }
+            contextStore.store(context, for: requestId)
         } else {
             // AFTER network fetch - retrieve context and call didReceiveResponse
-            Task {
-                guard let context = await contextStore.retrieve(for: requestId) else {
-                    return
-                }
+            if let context = contextStore.retrieve(for: requestId) {
                 observer.didReceiveResponse(
                     for: urlRequest,
                     response: response?.httpResponse,
@@ -54,15 +49,9 @@ struct ObserverInterceptor<Observer: GraphQLNetworkObserver>: ApolloInterceptor 
         // Wrap completion to handle errors
         let wrappedCompletion: (Result<GraphQLResult<Operation.Data>, Error>) -> Void = { result in
             if case .failure(let error) = result {
-                Task {
-                    guard let context = await contextStore.retrieve(for: requestId) else {
-                        completion(result)
-                        return
-                    }
+                if let context = contextStore.retrieve(for: requestId) {
                     observer.didFail(request: urlRequest, error: error, context: context)
-                    completion(result)
                 }
-                return
             }
             completion(result)
         }
