@@ -28,7 +28,7 @@ struct ObserverInterceptor<Observer: GraphQLNetworkObserver>: ApolloInterceptor 
             return
         }
 
-        let requestId = urlRequest.hashValue.description
+        let requestId = ObjectIdentifier(request).debugDescription
 
         if response == nil {
             // BEFORE network fetch - call willSendRequest and store context synchronously
