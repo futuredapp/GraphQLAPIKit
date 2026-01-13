@@ -5,8 +5,6 @@ import Foundation
 /// Implement this protocol to add logging, analytics, or request tracking to GraphQL operations.
 /// Observers are passive - they cannot modify requests or responses, only observe them.
 ///
-/// This protocol matches FTAPIKit's `NetworkObserver` pattern exactly, using `URLRequest` directly.
-///
 /// ## Context Lifecycle
 /// The `Context` associated type allows passing correlation data (request ID, start time, etc.)
 /// through the request lifecycle:

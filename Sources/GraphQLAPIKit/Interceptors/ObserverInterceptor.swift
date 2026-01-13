@@ -6,7 +6,7 @@ import Foundation
 /// - One BEFORE NetworkFetchInterceptor (captures request timing)
 /// - One AFTER NetworkFetchInterceptor (captures response)
 /// Both instances share state via the contextStore actor.
-final class ObserverInterceptor<Observer: GraphQLNetworkObserver>: ApolloInterceptor, @unchecked Sendable {
+struct ObserverInterceptor<Observer: GraphQLNetworkObserver>: ApolloInterceptor {
     let id = UUID().uuidString
 
     private let observer: Observer
@@ -38,12 +38,11 @@ final class ObserverInterceptor<Observer: GraphQLNetworkObserver>: ApolloInterce
             }
         } else {
             // AFTER network fetch - retrieve context and call didReceiveResponse
-            Task { [weak self] in
-                guard let self,
-                      let context = await contextStore.retrieve(for: requestId) else {
+            Task {
+                guard let context = await contextStore.retrieve(for: requestId) else {
                     return
                 }
-                self.observer.didReceiveResponse(
+                observer.didReceiveResponse(
                     for: urlRequest,
                     response: response?.httpResponse,
                     data: response?.rawData,
@@ -53,15 +52,14 @@ final class ObserverInterceptor<Observer: GraphQLNetworkObserver>: ApolloInterce
         }
 
         // Wrap completion to handle errors
-        let wrappedCompletion: (Result<GraphQLResult<Operation.Data>, Error>) -> Void = { [weak self] result in
+        let wrappedCompletion: (Result<GraphQLResult<Operation.Data>, Error>) -> Void = { result in
             if case .failure(let error) = result {
                 Task {
-                    guard let self,
-                          let context = await self.contextStore.retrieve(for: requestId) else {
+                    guard let context = await contextStore.retrieve(for: requestId) else {
                         completion(result)
                         return
                     }
-                    self.observer.didFail(request: urlRequest, error: error, context: context)
+                    observer.didFail(request: urlRequest, error: error, context: context)
                     completion(result)
                 }
                 return
