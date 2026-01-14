@@ -13,7 +13,6 @@ Developed to simplify [Futured](https://www.futured.app) in-house development of
 
 Currently there is no support for some Apollo's features:
 - Apollo built-in cache
-- GraphQL subscriptions
 - Custom interceptors
 
 Network observers are available for logging and analytics.
@@ -126,6 +125,25 @@ let configuration = GraphQLAPIConfiguration(
 let apiAdapter = GraphQLAPIAdapter(configuration: configuration)
 let queryResult = try await apiAdapter.fetch(query: query)
 let mutationResult = try await apiAdapter.perform(mutation: mutation)
+```
+
+### Subscriptions
+```swift
+let subscriptionStream = try await apiAdapter.subscribe(subscription: MySubscription())
+
+for try await data in subscriptionStream {
+    print("Received: \(data)")
+}
+```
+
+### Deferred Responses (@defer)
+```swift
+let deferredStream = try apiAdapter.fetch(query: MyDeferredQuery())
+
+for try await data in deferredStream {
+    // Data arrives progressively as deferred fragments complete
+    print("Received: \(data)")
+}
 ```
 
 ## Contributors
