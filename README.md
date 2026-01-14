@@ -7,7 +7,7 @@ Developed to simplify [Futured](https://www.futured.app) in-house development of
 
 - iOS 16.0+ / macOS 13.0+
 - Swift 5.9+
-- Apollo iOS 1.17.0
+- Apollo iOS 2.0.4
 
 ## Limitations
 
@@ -120,11 +120,12 @@ let mutation = MyExampleMutation()
 import GraphQLAPIKit
 import GraphQLGenerated
 
-let apiAdapter = GraphQLAPIAdapter(
+let configuration = GraphQLAPIConfiguration(
     url: URL(string: "https://api.example.com/graphql")!
 )
-let queryResult = await apiAdapter.fetch(query: query)
-let mutationResult = await apiAdapter.perform(mutation: mutation)
+let apiAdapter = GraphQLAPIAdapter(configuration: configuration)
+let queryResult = try await apiAdapter.fetch(query: query)
+let mutationResult = try await apiAdapter.perform(mutation: mutation)
 ```
 
 ## Contributors
