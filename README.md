@@ -7,7 +7,7 @@ Developed to simplify [Futured](https://www.futured.app) in-house development of
 
 - iOS 16.0+ / macOS 13.0+
 - Swift 5.9+
-- Apollo iOS 1.17.0
+- Apollo iOS 2.0.4
 
 ## Limitations
 
@@ -51,7 +51,7 @@ Copy and paste json configuration to the newly created file:
     "schemaTypes" : {
       "path" : "./",
       "moduleType" : {
-        "swiftPackageManager": {}
+        "swiftPackage": {}
       }
     },
     "operations" : {
@@ -74,7 +74,7 @@ Add `Queries` and `Mutations` folders to `GraphQLGenerated` folder.
 #### 5. Define Your first GraphQL Query Or Mutation
 Add your first Query or Mutation and save it with `.graphql` extension to `Queries` or `Mutations` folders.
 
-#### 6. Add Xcode Biuld Phase Script
+#### 6. Add Xcode Build Phase Script
 At your main app's target add a new build phase named `Generate GraphQL Operations`.
 Move your newly created build phase above the `Compile Sources` phase.
 Add script:
@@ -120,11 +120,12 @@ let mutation = MyExampleMutation()
 import GraphQLAPIKit
 import GraphQLGenerated
 
-let apiAdapter = GraphQLAPIAdapter(
+let configuration = GraphQLAPIConfiguration(
     url: URL(string: "https://api.example.com/graphql")!
 )
-let queryResult = await apiAdapter.fetch(query: query)
-let mutationResult = await apiAdapter.perform(mutation: mutation)
+let apiAdapter = GraphQLAPIAdapter(configuration: configuration)
+let queryResult = try await apiAdapter.fetch(query: query)
+let mutationResult = try await apiAdapter.perform(mutation: mutation)
 ```
 
 ## Contributors

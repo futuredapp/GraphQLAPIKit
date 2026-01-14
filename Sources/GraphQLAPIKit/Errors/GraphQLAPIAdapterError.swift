@@ -1,14 +1,14 @@
 import Apollo
 import Foundation
 
-public enum GraphQLAPIAdapterError: LocalizedError {
-    /// Network error received by Apollo from `URLSessionTaskDelegate`
+public enum GraphQLAPIAdapterError: LocalizedError, Sendable {
+    /// Network error with HTTP status code
     case network(code: Int, error: Error)
 
     /// The app is offline or doesn't have access to the network.
     case connection(Error)
 
-    /// Unhandled network error received from `Apollo.URLSessionClient`
+    /// Unhandled error
     case unhandled(Error)
 
     /// Request was cancelled
@@ -18,22 +18,36 @@ public enum GraphQLAPIAdapterError: LocalizedError {
     /// Errors returned by GraphQL API as part of `errors` field
     case graphQl([GraphQLError])
 
-
     init(error: Error) {
         if let error = error as? GraphQLAPIAdapterError {
             self = error
         } else if let error = error as? ApolloError {
             self = .graphQl(error.errors.map(GraphQLError.init))
-        } else if let error = error as? URLSessionClient.URLSessionClientError,
-            case let URLSessionClient.URLSessionClientError.networkError(_, response, underlyingError) = error
-        {
-            if let response = response {
-                self = .network(code: response.statusCode, error: underlyingError)
-            } else {
-                self = .connection(underlyingError)
+        } else if error is CancellationError {
+            self = .cancelled
+        } else if let urlError = error as? URLError {
+            switch urlError.code {
+            case .cancelled:
+                self = .cancelled
+            case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed:
+                self = .connection(urlError)
+            default:
+                self = .unhandled(urlError)
             }
         } else {
-            self = .unhandled(error)
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain {
+                if nsError.code == NSURLErrorCancelled {
+                    self = .cancelled
+                } else if nsError.code == NSURLErrorNotConnectedToInternet ||
+                          nsError.code == NSURLErrorNetworkConnectionLost {
+                    self = .connection(error)
+                } else {
+                    self = .unhandled(error)
+                }
+            } else {
+                self = .unhandled(error)
+            }
         }
     }
 

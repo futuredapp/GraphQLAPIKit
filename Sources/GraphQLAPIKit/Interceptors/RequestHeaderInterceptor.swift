@@ -2,26 +2,34 @@ import Apollo
 import ApolloAPI
 import Foundation
 
-struct RequestHeaderInterceptor: ApolloInterceptor {
-    let id: String = UUID().uuidString
-
+struct RequestHeaderInterceptor: GraphQLInterceptor {
     private let defaultHeaders: [String: String]
+    private let requestHeaders: RequestHeaders?
 
-    init(defaultHeaders: [String: String]) {
+    init(defaultHeaders: [String: String], requestHeaders: RequestHeaders? = nil) {
         self.defaultHeaders = defaultHeaders
+        self.requestHeaders = requestHeaders
     }
 
-    func interceptAsync<Operation: GraphQLOperation>(
-        chain: RequestChain,
-        request: HTTPRequest<Operation>,
-        response: HTTPResponse<Operation>?,
-        completion: @escaping (Result<GraphQLResult<Operation.Data>, Error>) -> Void
-    ) {
-        defaultHeaders.forEach { request.addHeader(name: $0.key, value: $0.value) }
-        if let additionalHeaders = request.context as? RequestHeaders {
-            additionalHeaders.additionalHeaders.forEach { request.addHeader(name: $0.key, value: $0.value) }
+    func intercept<Request: GraphQLRequest>(
+        request: Request,
+        next: NextInterceptorFunction<Request>
+    ) async throws -> InterceptorResultStream<Request> {
+        var modifiedRequest = request
+
+        // Add default headers
+        for (key, value) in defaultHeaders {
+            modifiedRequest.addHeader(name: key, value: value)
         }
 
-        chain.proceedAsync(request: request, response: response, interceptor: self, completion: completion)
+        // Add request-specific headers
+        if let headers = requestHeaders?.additionalHeaders {
+            for (key, value) in headers {
+                modifiedRequest.addHeader(name: key, value: value)
+            }
+        }
+
+        // Continue chain
+        return await next(modifiedRequest)
     }
 }
