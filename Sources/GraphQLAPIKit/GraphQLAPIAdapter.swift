@@ -8,59 +8,47 @@ public protocol GraphQLAPIAdapterProtocol: AnyObject, Sendable {
     ///
     /// - Parameters:
     ///   - query: The query to fetch.
-    ///   - headers: [optional] Additional headers to add to the request. Should default to `nil`.
+    ///   - configuration: Additional request configuration.
     /// - Returns: The query data on success.
     /// - Throws: `GraphQLAPIAdapterError` on failure.
     func fetch<Query: GraphQLQuery>(
         query: Query,
-        headers: RequestHeaders?
+        configuration: GraphQLRequestConfiguration
     ) async throws -> Query.Data where Query.ResponseFormat == SingleResponseFormat
 
     /// Performs a mutation by sending it to the server.
     ///
     /// - Parameters:
     ///   - mutation: The mutation to perform.
-    ///   - headers: [optional] Additional headers to add to the request. Should default to `nil`.
+    ///   - configuration: Additional request configuration.
     /// - Returns: The mutation data on success.
     /// - Throws: `GraphQLAPIAdapterError` on failure.
     func perform<Mutation: GraphQLMutation>(
         mutation: Mutation,
-        headers: RequestHeaders?
+        configuration: GraphQLRequestConfiguration
     ) async throws -> Mutation.Data where Mutation.ResponseFormat == SingleResponseFormat
 }
 
 public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol, Sendable {
     private let apollo: ApolloClient
 
-    /// Creates a new GraphQL API adapter with variadic network observers.
+    /// Creates a new GraphQL API adapter with the given configuration.
     ///
-    /// - Parameters:
-    ///   - url: The GraphQL endpoint URL.
-    ///   - urlSessionConfiguration: URL session configuration. Defaults to `.default`.
-    ///   - defaultHeaders: Headers to include in every request. Defaults to empty.
-    ///   - networkObservers: Zero or more network observers for monitoring requests.
-    public init<each Observer: GraphQLNetworkObserver>(
-        url: URL,
-        urlSessionConfiguration: URLSessionConfiguration = .default,
-        defaultHeaders: [String: String] = [:],
-        networkObservers: repeat each Observer
-    ) {
-        var observers: [any GraphQLNetworkObserver] = []
-        repeat observers.append(each networkObservers)
-
-        let urlSession = URLSession(configuration: urlSessionConfiguration)
+    /// - Parameter configuration: The configuration for the GraphQL client.
+    public init(configuration: GraphQLAPIConfiguration) {
+        let urlSession = URLSession(configuration: configuration.urlSessionConfiguration)
         let store = ApolloStore(cache: InMemoryNormalizedCache())
 
         let provider = NetworkInterceptorProvider(
-            defaultHeaders: defaultHeaders,
-            networkObservers: observers
+            defaultHeaders: configuration.defaultHeaders,
+            networkObservers: configuration.networkObservers
         )
 
         let networkTransport = RequestChainNetworkTransport(
             urlSession: urlSession,
             interceptorProvider: provider,
             store: store,
-            endpointURL: url
+            endpointURL: configuration.url
         )
 
         self.apollo = ApolloClient(
@@ -71,7 +59,7 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol, Sendable {
 
     public func fetch<Query: GraphQLQuery>(
         query: Query,
-        headers: RequestHeaders? = nil
+        configuration: GraphQLRequestConfiguration = GraphQLRequestConfiguration()
     ) async throws -> Query.Data where Query.ResponseFormat == SingleResponseFormat {
         // Use networkOnly to bypass cache, with writeResultsToCache: false
         let config = RequestConfiguration(writeResultsToCache: false)
@@ -102,7 +90,7 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol, Sendable {
 
     public func perform<Mutation: GraphQLMutation>(
         mutation: Mutation,
-        headers: RequestHeaders? = nil
+        configuration: GraphQLRequestConfiguration = GraphQLRequestConfiguration()
     ) async throws -> Mutation.Data where Mutation.ResponseFormat == SingleResponseFormat {
         // Mutations don't write to cache
         let config = RequestConfiguration(writeResultsToCache: false)

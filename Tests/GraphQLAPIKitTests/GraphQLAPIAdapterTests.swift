@@ -9,7 +9,8 @@ final class GraphQLAPIAdapterTests: XCTestCase {
     // MARK: - Initialization Tests
 
     func testAdapterInitializationWithMinimalParameters() {
-        let adapter = GraphQLAPIAdapter(url: testURL)
+        let configuration = GraphQLAPIConfiguration(url: testURL)
+        let adapter = GraphQLAPIAdapter(configuration: configuration)
         XCTAssertNotNil(adapter)
     }
 
@@ -19,22 +20,24 @@ final class GraphQLAPIAdapterTests: XCTestCase {
             "Content-Type": "application/json",
             "X-API-Key": "secret"
         ]
-        let adapter = GraphQLAPIAdapter(
+        let configuration = GraphQLAPIConfiguration(
             url: testURL,
             defaultHeaders: headers
         )
+        let adapter = GraphQLAPIAdapter(configuration: configuration)
         XCTAssertNotNil(adapter)
     }
 
     func testAdapterInitializationWithCustomURLSessionConfiguration() {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
-        config.timeoutIntervalForResource = 60
+        let sessionConfig = URLSessionConfiguration.default
+        sessionConfig.timeoutIntervalForRequest = 30
+        sessionConfig.timeoutIntervalForResource = 60
 
-        let adapter = GraphQLAPIAdapter(
+        let configuration = GraphQLAPIConfiguration(
             url: testURL,
-            urlSessionConfiguration: config
+            urlSessionConfiguration: sessionConfig
         )
+        let adapter = GraphQLAPIAdapter(configuration: configuration)
         XCTAssertNotNil(adapter)
     }
 

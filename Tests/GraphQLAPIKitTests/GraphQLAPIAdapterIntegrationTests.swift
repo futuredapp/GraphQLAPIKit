@@ -41,12 +41,19 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
 
     // MARK: - Initialization Tests
 
+    func testAdapterInitializationWithNoObservers() {
+        let configuration = GraphQLAPIConfiguration(url: testURL)
+        let adapter = GraphQLAPIAdapter(configuration: configuration)
+        XCTAssertNotNil(adapter)
+    }
+
     func testAdapterInitializationWithSingleObserver() {
         let observer = IntegrationMockObserver()
-        let adapter = GraphQLAPIAdapter(
+        let configuration = GraphQLAPIConfiguration(
             url: testURL,
-            networkObservers: observer
+            networkObservers: [observer]
         )
+        let adapter = GraphQLAPIAdapter(configuration: configuration)
         XCTAssertNotNil(adapter)
     }
 
@@ -55,10 +62,11 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
         let observer2 = IntegrationMockObserver()
         let observer3 = IntegrationMockObserver()
 
-        let adapter = GraphQLAPIAdapter(
+        let configuration = GraphQLAPIConfiguration(
             url: testURL,
-            networkObservers: observer1, observer2, observer3
+            networkObservers: [observer1, observer2, observer3]
         )
+        let adapter = GraphQLAPIAdapter(configuration: configuration)
         XCTAssertNotNil(adapter)
     }
 
@@ -69,25 +77,27 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
             "X-Client-Version": "1.0.0"
         ]
 
-        let adapter = GraphQLAPIAdapter(
+        let configuration = GraphQLAPIConfiguration(
             url: testURL,
             defaultHeaders: defaultHeaders,
-            networkObservers: observer
+            networkObservers: [observer]
         )
+        let adapter = GraphQLAPIAdapter(configuration: configuration)
         XCTAssertNotNil(adapter)
     }
 
     func testAdapterInitializationWithCustomSessionConfiguration() {
         let observer = IntegrationMockObserver()
-        let config = URLSessionConfiguration.ephemeral
-        config.timeoutIntervalForRequest = 30
+        let sessionConfig = URLSessionConfiguration.ephemeral
+        sessionConfig.timeoutIntervalForRequest = 30
 
-        let adapter = GraphQLAPIAdapter(
+        let configuration = GraphQLAPIConfiguration(
             url: testURL,
-            urlSessionConfiguration: config,
+            urlSessionConfiguration: sessionConfig,
             defaultHeaders: ["X-Test": "value"],
-            networkObservers: observer
+            networkObservers: [observer]
         )
+        let adapter = GraphQLAPIAdapter(configuration: configuration)
         XCTAssertNotNil(adapter)
     }
 
