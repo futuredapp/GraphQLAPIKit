@@ -51,7 +51,7 @@ Copy and paste json configuration to the newly created file:
     "schemaTypes" : {
       "path" : "./",
       "moduleType" : {
-        "swiftPackageManager": {}
+        "swiftPackage": {}
       }
     },
     "operations" : {
@@ -74,7 +74,7 @@ Add `Queries` and `Mutations` folders to `GraphQLGenerated` folder.
 #### 5. Define Your first GraphQL Query Or Mutation
 Add your first Query or Mutation and save it with `.graphql` extension to `Queries` or `Mutations` folders.
 
-#### 6. Add Xcode Biuld Phase Script
+#### 6. Add Xcode Build Phase Script
 At your main app's target add a new build phase named `Generate GraphQL Operations`.
 Move your newly created build phase above the `Compile Sources` phase.
 Add script:
