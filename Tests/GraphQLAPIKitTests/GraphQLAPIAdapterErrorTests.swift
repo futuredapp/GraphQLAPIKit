@@ -39,58 +39,63 @@ final class GraphQLAPIAdapterErrorTests: XCTestCase {
         }
     }
 
-    func testURLSessionClientNetworkErrorWithResponse() {
+    func testURLErrorNotConnectedToInternet() {
         // Given
-        let underlyingError = NSError(
-            domain: "TestDomain",
-            code: 500,
-            userInfo: [NSLocalizedDescriptionKey: "Server error"]
-        )
-        let response = HTTPURLResponse(
-            url: URL(string: "https://example.com")!,
-            statusCode: 500,
-            httpVersion: nil,
-            headerFields: nil
-        )!
-        let urlSessionError = URLSessionClient.URLSessionClientError.networkError(
-            data: Data(),
-            response: response,
-            underlying: underlyingError
-        )
+        let urlError = URLError(.notConnectedToInternet)
 
         // When
-        let error = GraphQLAPIAdapterError(error: urlSessionError)
+        let error = GraphQLAPIAdapterError(error: urlError)
 
         // Then
-        if case let .network(code, error) = error {
-            XCTAssertEqual(code, 500)
-            XCTAssertEqual(error.localizedDescription, "Server error")
+        if case .connection = error {
+            // Success
         } else {
-            XCTFail("Expected .network error")
+            XCTFail("Expected .connection error")
         }
     }
 
-    func testURLSessionClientNetworkErrorWithoutResponse() {
+    func testURLErrorNetworkConnectionLost() {
         // Given
-        let underlyingError = NSError(
-            domain: NSURLErrorDomain,
-            code: NSURLErrorNotConnectedToInternet,
-            userInfo: [NSLocalizedDescriptionKey: "No internet connection"]
-        )
-        let urlSessionError = URLSessionClient.URLSessionClientError.networkError(
-            data: Data(),
-            response: nil,
-            underlying: underlyingError
-        )
+        let urlError = URLError(.networkConnectionLost)
 
         // When
-        let error = GraphQLAPIAdapterError(error: urlSessionError)
+        let error = GraphQLAPIAdapterError(error: urlError)
 
         // Then
-        if case let .connection(error) = error {
-            XCTAssertEqual(error.localizedDescription, "No internet connection")
+        if case .connection = error {
+            // Success
         } else {
             XCTFail("Expected .connection error")
+        }
+    }
+
+    func testURLErrorCancelled() {
+        // Given
+        let urlError = URLError(.cancelled)
+
+        // When
+        let error = GraphQLAPIAdapterError(error: urlError)
+
+        // Then
+        if case .cancelled = error {
+            // Success
+        } else {
+            XCTFail("Expected .cancelled error")
+        }
+    }
+
+    func testCancellationError() {
+        // Given
+        let cancellationError = CancellationError()
+
+        // When
+        let error = GraphQLAPIAdapterError(error: cancellationError)
+
+        // Then
+        if case .cancelled = error {
+            // Success
+        } else {
+            XCTFail("Expected .cancelled error")
         }
     }
 

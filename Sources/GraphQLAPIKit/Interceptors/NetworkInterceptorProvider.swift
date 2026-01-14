@@ -3,43 +3,52 @@ import ApolloAPI
 import Foundation
 
 struct NetworkInterceptorProvider: InterceptorProvider {
-    private let client: URLSessionClient
     private let defaultHeaders: [String: String]
-    private let pairOfObserverInterceptors: [(before: ApolloInterceptor, after: ApolloInterceptor)]
+    private let networkObservers: [any GraphQLNetworkObserver]
 
     init(
-        client: URLSessionClient,
         defaultHeaders: [String: String],
         networkObservers: [any GraphQLNetworkObserver]
     ) {
-        self.client = client
         self.defaultHeaders = defaultHeaders
-        // Create interceptor pairs with shared context stores
-        self.pairOfObserverInterceptors = networkObservers.map { Self.makePair(of: $0) }
+        self.networkObservers = networkObservers
     }
 
-    func interceptors<Operation: GraphQLOperation>(for operation: Operation) -> [ApolloInterceptor] {
-        // Headers first, then before-observers, then network fetch, then after-observers
+    func graphQLInterceptors<Operation: GraphQLOperation>(
+        for operation: Operation
+    ) -> [any GraphQLInterceptor] {
         [
             RequestHeaderInterceptor(defaultHeaders: defaultHeaders),
-        ]
-        + pairOfObserverInterceptors.map(\.before)  // Before network - captures timing
-        + [
-            MaxRetryInterceptor(),
-            NetworkFetchInterceptor(client: client)
-        ]
-        + pairOfObserverInterceptors.map(\.after)   // After network - captures response
-        + [
-            ResponseCodeInterceptor(),
-            MultipartResponseParsingInterceptor(),
-            JSONResponseParsingInterceptor()
+            MaxRetryInterceptor()
         ]
     }
-    
-    static private func makePair<T: GraphQLNetworkObserver>(of observer: T) -> (before: ApolloInterceptor, after: ApolloInterceptor) {
-        let contextStore = ObserverContextStore<T.Context>()
-        let beforeInterceptor = ObserverInterceptor(observer: observer, contextStore: contextStore)
-        let afterInterceptor = ObserverInterceptor(observer: observer, contextStore: contextStore)
-        return (before: beforeInterceptor, after: afterInterceptor)
+
+    func httpInterceptors<Operation: GraphQLOperation>(
+        for operation: Operation
+    ) -> [any HTTPInterceptor] {
+        var interceptors: [any HTTPInterceptor] = networkObservers.map { observer in
+            makeObserverInterceptor(observer)
+        }
+        interceptors.append(ResponseCodeInterceptor())
+        return interceptors
+    }
+
+    func cacheInterceptor<Operation: GraphQLOperation>(
+        for operation: Operation
+    ) -> any CacheInterceptor {
+        // No-op cache interceptor - we don't use caching
+        NoCacheInterceptor()
+    }
+
+    func responseParser<Operation: GraphQLOperation>(
+        for operation: Operation
+    ) -> any ResponseParsingInterceptor {
+        JSONResponseParsingInterceptor()
+    }
+
+    private func makeObserverInterceptor<T: GraphQLNetworkObserver>(
+        _ observer: T
+    ) -> any HTTPInterceptor {
+        ObserverInterceptor(observer: observer)
     }
 }

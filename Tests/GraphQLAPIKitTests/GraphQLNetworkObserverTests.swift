@@ -43,20 +43,7 @@ final class GraphQLNetworkObserverTests: XCTestCase {
         }
     }
 
-    // MARK: - ObserverInterceptor Tests
-
-    func testObserverInterceptorCreation() {
-        let observer = MockObserver()
-        let contextStore = ObserverContextStore<MockObserver.Context>()
-
-        let interceptor1 = ObserverInterceptor(observer: observer, contextStore: contextStore)
-        let interceptor2 = ObserverInterceptor(observer: observer, contextStore: contextStore)
-
-        XCTAssertNotNil(interceptor1.id)
-        XCTAssertNotNil(interceptor2.id)
-        XCTAssertNotEqual(interceptor1.id, interceptor2.id)
-        XCTAssertFalse(observer.willSendRequestCalled)
-    }
+    // MARK: - Observer Protocol Tests
 
     func testProtocolMethodSignatures() {
         let observer = MockObserver()
@@ -85,27 +72,31 @@ final class GraphQLNetworkObserverTests: XCTestCase {
         XCTAssertTrue(observer.didFailCalled)
     }
 
-    // MARK: - Context Store Tests
+    func testObserverContextContainsTimingInfo() {
+        let observer = MockObserver()
+        let url = URL(string: "https://api.example.com/graphql")!
+        let request = URLRequest(url: url)
 
-    func testContextStoreOperations() {
-        let store = ObserverContextStore<String>()
+        let beforeTime = Date()
+        let context = observer.willSendRequest(request)
+        let afterTime = Date()
 
-        // Test store and retrieve
-        store.store("context-1", for: "request-1")
-        store.store("context-2", for: "request-2")
-        store.store("context-3", for: "request-3")
+        // Verify context contains start time within expected range
+        XCTAssertGreaterThanOrEqual(context.startTime, beforeTime)
+        XCTAssertLessThanOrEqual(context.startTime, afterTime)
+    }
 
-        // Retrieve in different order
-        let context2 = store.retrieve(for: "request-2")
-        let context1 = store.retrieve(for: "request-1")
-        let context3 = store.retrieve(for: "request-3")
+    func testObserverContextRequestIdIsUnique() {
+        let observer = MockObserver()
+        let url = URL(string: "https://api.example.com/graphql")!
+        let request = URLRequest(url: url)
 
-        XCTAssertEqual(context1, "context-1")
-        XCTAssertEqual(context2, "context-2")
-        XCTAssertEqual(context3, "context-3")
+        let context1 = observer.willSendRequest(request)
+        let context2 = observer.willSendRequest(request)
+        let context3 = observer.willSendRequest(request)
 
-        // Verify retrieve removes context
-        let secondRetrieve = store.retrieve(for: "request-1")
-        XCTAssertNil(secondRetrieve)
+        XCTAssertNotEqual(context1.requestId, context2.requestId)
+        XCTAssertNotEqual(context2.requestId, context3.requestId)
+        XCTAssertNotEqual(context1.requestId, context3.requestId)
     }
 }
