@@ -1,6 +1,6 @@
-import XCTest
 import Apollo
 @testable import GraphQLAPIKit
+import XCTest
 
 final class GraphQLAPIAdapterErrorTests: XCTestCase {
     func testGraphQLAPIAdapterErrorPassthrough() {
@@ -46,12 +46,14 @@ final class GraphQLAPIAdapterErrorTests: XCTestCase {
             code: 500,
             userInfo: [NSLocalizedDescriptionKey: "Server error"]
         )
+        // swiftlint:disable force_unwrapping
         let response = HTTPURLResponse(
             url: URL(string: "https://example.com")!,
             statusCode: 500,
             httpVersion: nil,
             headerFields: nil
         )!
+        // swiftlint:enable force_unwrapping
         let urlSessionError = URLSessionClient.URLSessionClientError.networkError(
             data: Data(),
             response: response,

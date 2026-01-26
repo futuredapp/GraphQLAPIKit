@@ -38,12 +38,14 @@ public protocol GraphQLAPIAdapterProtocol: AnyObject {
 public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
     private let apollo: ApolloClientProtocol
 
+    // swiftlint:disable function_default_parameter_at_end
     public init<each Observer: GraphQLNetworkObserver>(
         url: URL,
         urlSessionConfiguration: URLSessionConfiguration = .default,
         defaultHeaders: [String: String] = [:],
         networkObservers: repeat each Observer
     ) {
+        // swiftlint:enable function_default_parameter_at_end
         var observers: [any GraphQLNetworkObserver] = []
         repeat observers.append(each networkObservers)
 
@@ -68,7 +70,7 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol {
         url: URL,
         urlSessionConfiguration: URLSessionConfiguration = .default,
         defaultHeaders: [String: String] = [:],
-        networkObservers: [any GraphQLNetworkObserver]
+        networkObservers: [any GraphQLNetworkObserver] = []
     ) {
         let provider = NetworkInterceptorProvider(
             client: URLSessionClient(sessionConfiguration: urlSessionConfiguration),

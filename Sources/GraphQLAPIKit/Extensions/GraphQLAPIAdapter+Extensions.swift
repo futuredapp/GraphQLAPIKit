@@ -2,6 +2,7 @@ import Apollo
 import ApolloAPI
 import Foundation
 
+// swiftlint:disable:next no_extension_access_modifier
 public extension GraphQLAPIAdapterProtocol {
     func fetch<Query: GraphQLQuery>(
         query: Query,

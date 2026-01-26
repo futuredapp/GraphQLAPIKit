@@ -18,15 +18,13 @@ public enum GraphQLAPIAdapterError: LocalizedError {
     /// Errors returned by GraphQL API as part of `errors` field
     case graphQl([GraphQLError])
 
-
     init(error: Error) {
         if let error = error as? GraphQLAPIAdapterError {
             self = error
         } else if let error = error as? ApolloError {
             self = .graphQl(error.errors.map(GraphQLError.init))
         } else if let error = error as? URLSessionClient.URLSessionClientError,
-            case let URLSessionClient.URLSessionClientError.networkError(_, response, underlyingError) = error
-        {
+                  case let URLSessionClient.URLSessionClientError.networkError(_, response, underlyingError) = error {
             if let response = response {
                 self = .network(code: response.statusCode, error: underlyingError)
             } else {
