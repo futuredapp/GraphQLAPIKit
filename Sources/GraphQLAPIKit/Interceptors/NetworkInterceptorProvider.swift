@@ -21,7 +21,7 @@ struct NetworkInterceptorProvider: InterceptorProvider {
     func interceptors<Operation: GraphQLOperation>(for operation: Operation) -> [ApolloInterceptor] {
         // Headers first, then before-observers, then network fetch, then after-observers
         [
-            RequestHeaderInterceptor(defaultHeaders: defaultHeaders),
+            RequestHeaderInterceptor(defaultHeaders: defaultHeaders)
         ]
         + pairOfObserverInterceptors.map(\.before)  // Before network - captures timing
         + [
@@ -35,8 +35,8 @@ struct NetworkInterceptorProvider: InterceptorProvider {
             JSONResponseParsingInterceptor()
         ]
     }
-    
-    static private func makePair<T: GraphQLNetworkObserver>(of observer: T) -> (before: ApolloInterceptor, after: ApolloInterceptor) {
+
+    private static func makePair<T: GraphQLNetworkObserver>(of observer: T) -> (before: ApolloInterceptor, after: ApolloInterceptor) {
         let contextStore = ObserverContextStore<T.Context>()
         let beforeInterceptor = ObserverInterceptor(observer: observer, contextStore: contextStore)
         let afterInterceptor = ObserverInterceptor(observer: observer, contextStore: contextStore)

@@ -1,7 +1,7 @@
 import Apollo
 import ApolloAPI
-import XCTest
 @testable import GraphQLAPIKit
+import XCTest
 
 // MARK: - MockURLProtocol
 
@@ -22,11 +22,11 @@ final class MockURLProtocol: URLProtocol {
         mockError = nil
     }
 
-    override class func canInit(with request: URLRequest) -> Bool {
+    override static func canInit(with request: URLRequest) -> Bool {
         true
     }
 
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+    override static func canonicalRequest(for request: URLRequest) -> URLRequest {
         request
     }
 
@@ -44,12 +44,16 @@ final class MockURLProtocol: URLProtocol {
             statusCode: 200
         )
 
+        guard let url = request.url else {
+            return
+        }
+
         let httpResponse = HTTPURLResponse(
-            url: request.url!,
+            url: url,
             statusCode: response.statusCode,
             httpVersion: "HTTP/1.1",
             headerFields: ["Content-Type": "application/json"]
-        )!
+        )! // swiftlint:disable:this force_unwrapping
 
         client?.urlProtocol(self, didReceive: httpResponse, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: response.data)
@@ -60,9 +64,9 @@ final class MockURLProtocol: URLProtocol {
 
     /// A valid GraphQL response with minimal data
     private var validGraphQLResponse: Data {
-        """
+        Data("""
         {"data": {"__typename": "Query"}}
-        """.data(using: .utf8)!
+        """.utf8)
     }
 }
 
@@ -72,7 +76,9 @@ enum MockSchema: SchemaMetadata {
     static let configuration: any SchemaConfiguration.Type = MockSchemaConfiguration.self
 
     static func objectType(forTypename typename: String) -> Object? {
-        if typename == "Query" { return MockQuery.Data.self.__parentType as? Object }
+        if typename == "Query" {
+            return MockQuery.Data.self.__parentType as? Object
+        }
         return nil
     }
 }
@@ -94,6 +100,7 @@ final class MockQuery: GraphQLQuery {
 
     init() {}
 
+    // swiftlint:disable nesting identifier_name
     struct MockQueryData: RootSelectionSet {
         typealias Schema = MockSchema
 
@@ -106,6 +113,7 @@ final class MockQuery: GraphQLQuery {
             self.__data = _dataDict
         }
     }
+    // swiftlint:enable nesting identifier_name
 }
 
 // MARK: - Mock Request Headers
@@ -172,6 +180,7 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
         ]
 
         let adapter = GraphQLAPIAdapter(
+            // swiftlint:disable:next force_unwrapping
             url: URL(string: "https://api.example.com/graphql")!,
             urlSessionConfiguration: mockSessionConfiguration(),
             defaultHeaders: defaultHeaders,
@@ -207,10 +216,10 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
         ])
 
         let adapter = GraphQLAPIAdapter(
+            // swiftlint:disable:next force_unwrapping
             url: URL(string: "https://api.example.com/graphql")!,
             urlSessionConfiguration: mockSessionConfiguration(),
-            defaultHeaders: [:],
-            networkObservers: observer
+            networkObservers: [observer]
         )
 
         _ = adapter.fetch(query: MockQuery(), context: contextHeaders, queue: .main) { _ in
@@ -246,6 +255,7 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
         ])
 
         let adapter = GraphQLAPIAdapter(
+            // swiftlint:disable:next force_unwrapping
             url: URL(string: "https://api.example.com/graphql")!,
             urlSessionConfiguration: mockSessionConfiguration(),
             defaultHeaders: defaultHeaders,
@@ -282,10 +292,13 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
         let defaultHeaders = ["X-Shared-Header": "shared-value"]
 
         let adapter = GraphQLAPIAdapter(
+            // swiftlint:disable:next force_unwrapping
             url: URL(string: "https://api.example.com/graphql")!,
             urlSessionConfiguration: mockSessionConfiguration(),
             defaultHeaders: defaultHeaders,
-            networkObservers: observer1, observer2, observer3
+            networkObservers: observer1,
+            observer2,
+            observer3
         )
 
         _ = adapter.fetch(query: MockQuery(), context: nil, queue: .main) { _ in
@@ -319,10 +332,10 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
         let observer = IntegrationMockObserver()
 
         let adapter = GraphQLAPIAdapter(
+            // swiftlint:disable:next force_unwrapping
             url: URL(string: "https://api.example.com/graphql")!,
             urlSessionConfiguration: mockSessionConfiguration(),
-            defaultHeaders: [:],
-            networkObservers: observer
+            networkObservers: [observer]
         )
 
         _ = adapter.fetch(query: MockQuery(), context: nil, queue: .main) { _ in
@@ -340,5 +353,4 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
         XCTAssertEqual(capturedRequest.value(forHTTPHeaderField: "X-APOLLO-OPERATION-NAME"), "MockQuery")
         XCTAssertNotNil(capturedRequest.value(forHTTPHeaderField: "Content-Type"))
     }
-
 }
