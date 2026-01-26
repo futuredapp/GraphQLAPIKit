@@ -1,12 +1,14 @@
-import XCTest
 @testable import GraphQLAPIKit
+import XCTest
 
 final class GraphQLNetworkObserverTests: XCTestCase {
 
     // MARK: - MockObserver
 
+    // swiftlint:disable nesting
     final class MockObserver: GraphQLNetworkObserver {
         struct Context: Sendable {
+            // swiftlint:enable nesting
             let requestId: String
             let startTime: Date
         }
@@ -47,6 +49,7 @@ final class GraphQLNetworkObserverTests: XCTestCase {
 
     func testProtocolMethodSignatures() {
         let observer = MockObserver()
+        // swiftlint:disable:next force_unwrapping
         let url = URL(string: "https://api.example.com/graphql")!
 
         var request = URLRequest(url: url)
@@ -74,6 +77,7 @@ final class GraphQLNetworkObserverTests: XCTestCase {
 
     func testObserverContextContainsTimingInfo() {
         let observer = MockObserver()
+        // swiftlint:disable:next force_unwrapping
         let url = URL(string: "https://api.example.com/graphql")!
         let request = URLRequest(url: url)
 
@@ -88,6 +92,7 @@ final class GraphQLNetworkObserverTests: XCTestCase {
 
     func testObserverContextRequestIdIsUnique() {
         let observer = MockObserver()
+        // swiftlint:disable:next force_unwrapping
         let url = URL(string: "https://api.example.com/graphql")!
         let request = URLRequest(url: url)
 

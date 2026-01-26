@@ -1,6 +1,6 @@
-import XCTest
 import Apollo
 @testable import GraphQLAPIKit
+import XCTest
 
 final class GraphQLAPIAdapterErrorTests: XCTestCase {
     func testGraphQLAPIAdapterErrorPassthrough() {

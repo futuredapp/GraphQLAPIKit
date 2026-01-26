@@ -1,7 +1,7 @@
 import Apollo
 import ApolloAPI
-import XCTest
 @testable import GraphQLAPIKit
+import XCTest
 
 // MARK: - Mock Request Headers
 
@@ -37,6 +37,7 @@ final class IntegrationMockObserver: GraphQLNetworkObserver, @unchecked Sendable
 // MARK: - Integration Tests
 
 final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
+    // swiftlint:disable:next force_unwrapping
     let testURL = URL(string: "https://api.example.com/graphql")!
 
     // MARK: - Initialization Tests
@@ -105,6 +106,7 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
 
     func testObserverCallbackSequence() {
         let observer = IntegrationMockObserver()
+        // swiftlint:disable:next force_unwrapping
         let url = URL(string: "https://api.example.com/graphql")!
 
         var request = URLRequest(url: url)
@@ -121,6 +123,7 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
 
     func testObserverErrorCallback() {
         let observer = IntegrationMockObserver()
+        // swiftlint:disable:next force_unwrapping
         let url = URL(string: "https://api.example.com/graphql")!
         let request = URLRequest(url: url)
 
