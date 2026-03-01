@@ -1,7 +1,7 @@
 import Apollo
 import ApolloAPI
-import XCTest
 @testable import GraphQLAPIKit
+import XCTest
 
 // MARK: - Mock Request Headers
 

@@ -1,9 +1,10 @@
 import Apollo
 import ApolloAPI
-import XCTest
 @testable import GraphQLAPIKit
+import XCTest
 
 final class GraphQLAPIAdapterTests: XCTestCase {
+    // swiftlint:disable:next force_unwrapping
     let testURL = URL(string: "https://api.example.com/graphql")!
 
     // MARK: - Initialization Tests
@@ -40,5 +41,4 @@ final class GraphQLAPIAdapterTests: XCTestCase {
         let adapter = GraphQLAPIAdapter(configuration: configuration)
         XCTAssertNotNil(adapter)
     }
-
 }
