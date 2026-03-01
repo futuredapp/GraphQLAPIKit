@@ -107,61 +107,63 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol, Sendable {
         query: Query,
         configuration: GraphQLRequestConfiguration = GraphQLRequestConfiguration()
     ) async throws -> Query.Data where Query.ResponseFormat == SingleResponseFormat {
-        // Use networkOnly to bypass cache, with writeResultsToCache: false
-        let config = RequestConfiguration(writeResultsToCache: false)
+        try await RequestHeadersContext.$headers.withValue(configuration.headers) {
+            let config = RequestConfiguration(writeResultsToCache: false)
 
-        let response = try await apollo.fetch(
-            query: query,
-            cachePolicy: .networkOnly,
-            requestConfiguration: config
-        )
-
-        if let errors = response.errors, !errors.isEmpty {
-            throw GraphQLAPIAdapterError(error: ApolloError(errors: errors))
-        }
-
-        guard let data = response.data else {
-            assertionFailure("No data received")
-            throw GraphQLAPIAdapterError.unhandled(
-                NSError(
-                    domain: "GraphQLAPIKit",
-                    code: -1,
-                    userInfo: [NSLocalizedDescriptionKey: "No data received"]
-                )
+            let response = try await apollo.fetch(
+                query: query,
+                cachePolicy: .networkOnly,
+                requestConfiguration: config
             )
-        }
 
-        return data
+            if let errors = response.errors, !errors.isEmpty {
+                throw GraphQLAPIAdapterError(error: ApolloError(errors: errors))
+            }
+
+            guard let data = response.data else {
+                assertionFailure("No data received")
+                throw GraphQLAPIAdapterError.unhandled(
+                    NSError(
+                        domain: "GraphQLAPIKit",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "No data received"]
+                    )
+                )
+            }
+
+            return data
+        }
     }
 
     public func perform<Mutation: GraphQLMutation>(
         mutation: Mutation,
         configuration: GraphQLRequestConfiguration = GraphQLRequestConfiguration()
     ) async throws -> Mutation.Data where Mutation.ResponseFormat == SingleResponseFormat {
-        // Mutations don't write to cache
-        let config = RequestConfiguration(writeResultsToCache: false)
+        try await RequestHeadersContext.$headers.withValue(configuration.headers) {
+            let config = RequestConfiguration(writeResultsToCache: false)
 
-        let response = try await apollo.perform(
-            mutation: mutation,
-            requestConfiguration: config
-        )
-
-        if let errors = response.errors, !errors.isEmpty {
-            throw GraphQLAPIAdapterError(error: ApolloError(errors: errors))
-        }
-
-        guard let data = response.data else {
-            assertionFailure("No data received")
-            throw GraphQLAPIAdapterError.unhandled(
-                NSError(
-                    domain: "GraphQLAPIKit",
-                    code: -1,
-                    userInfo: [NSLocalizedDescriptionKey: "No data received"]
-                )
+            let response = try await apollo.perform(
+                mutation: mutation,
+                requestConfiguration: config
             )
-        }
 
-        return data
+            if let errors = response.errors, !errors.isEmpty {
+                throw GraphQLAPIAdapterError(error: ApolloError(errors: errors))
+            }
+
+            guard let data = response.data else {
+                assertionFailure("No data received")
+                throw GraphQLAPIAdapterError.unhandled(
+                    NSError(
+                        domain: "GraphQLAPIKit",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "No data received"]
+                    )
+                )
+            }
+
+            return data
+        }
     }
 
     // MARK: - Incremental/Deferred Response
@@ -170,29 +172,33 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol, Sendable {
         query: Query,
         configuration: GraphQLRequestConfiguration = GraphQLRequestConfiguration()
     ) throws -> AsyncThrowingStream<Query.Data, Error> where Query.ResponseFormat == IncrementalDeferredResponseFormat {
-        let config = RequestConfiguration(writeResultsToCache: false)
+        try RequestHeadersContext.$headers.withValue(configuration.headers) {
+            let config = RequestConfiguration(writeResultsToCache: false)
 
-        let apolloStream = try apollo.fetch(
-            query: query,
-            cachePolicy: .networkOnly,
-            requestConfiguration: config
-        )
+            let apolloStream = try apollo.fetch(
+                query: query,
+                cachePolicy: .networkOnly,
+                requestConfiguration: config
+            )
 
-        return transformStream(apolloStream)
+            return transformStream(apolloStream)
+        }
     }
 
     public func perform<Mutation: GraphQLMutation>(
         mutation: Mutation,
         configuration: GraphQLRequestConfiguration = GraphQLRequestConfiguration()
     ) throws -> AsyncThrowingStream<Mutation.Data, Error> where Mutation.ResponseFormat == IncrementalDeferredResponseFormat {
-        let config = RequestConfiguration(writeResultsToCache: false)
+        try RequestHeadersContext.$headers.withValue(configuration.headers) {
+            let config = RequestConfiguration(writeResultsToCache: false)
 
-        let apolloStream = try apollo.perform(
-            mutation: mutation,
-            requestConfiguration: config
-        )
+            let apolloStream = try apollo.perform(
+                mutation: mutation,
+                requestConfiguration: config
+            )
 
-        return transformStream(apolloStream)
+            return transformStream(apolloStream)
+        }
     }
 
     // MARK: - Subscriptions
@@ -201,14 +207,16 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol, Sendable {
         subscription: Subscription,
         configuration: GraphQLSubscriptionConfiguration = GraphQLSubscriptionConfiguration()
     ) async throws -> AsyncThrowingStream<Subscription.Data, Error> {
-        let config = RequestConfiguration(writeResultsToCache: false)
+        try await RequestHeadersContext.$headers.withValue(configuration.headers) {
+            let config = RequestConfiguration(writeResultsToCache: false)
 
-        let apolloStream = try await apollo.subscribe(
-            subscription: subscription,
-            requestConfiguration: config
-        )
+            let apolloStream = try await apollo.subscribe(
+                subscription: subscription,
+                requestConfiguration: config
+            )
 
-        return transformStream(apolloStream)
+            return transformStream(apolloStream)
+        }
     }
 
     // MARK: - Private Helpers
