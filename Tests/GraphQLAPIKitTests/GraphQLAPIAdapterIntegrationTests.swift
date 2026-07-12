@@ -37,7 +37,12 @@ final class IntegrationMockObserver: GraphQLNetworkObserver, @unchecked Sendable
 // MARK: - Integration Tests
 
 final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
-    let testURL = URL(string: "https://api.example.com/graphql")!
+    private var testURL: URL {
+        guard let url = URL(string: "https://api.example.com/graphql") else {
+            preconditionFailure("Invalid test URL")
+        }
+        return url
+    }
 
     // MARK: - Initialization Tests
 
@@ -105,9 +110,8 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
 
     func testObserverCallbackSequence() {
         let observer = IntegrationMockObserver()
-        let url = URL(string: "https://api.example.com/graphql")!
 
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: testURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -121,8 +125,7 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
 
     func testObserverErrorCallback() {
         let observer = IntegrationMockObserver()
-        let url = URL(string: "https://api.example.com/graphql")!
-        let request = URLRequest(url: url)
+        let request = URLRequest(url: testURL)
 
         let context = observer.willSendRequest(request)
         let error = NSError(domain: "TestDomain", code: 500, userInfo: nil)

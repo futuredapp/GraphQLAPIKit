@@ -2,6 +2,12 @@
 import XCTest
 
 final class GraphQLNetworkObserverTests: XCTestCase {
+    private var testURL: URL {
+        guard let url = URL(string: "https://api.example.com/graphql") else {
+            preconditionFailure("Invalid test URL")
+        }
+        return url
+    }
 
     // MARK: - MockObserver
 
@@ -49,10 +55,8 @@ final class GraphQLNetworkObserverTests: XCTestCase {
 
     func testProtocolMethodSignatures() {
         let observer = MockObserver()
-        // swiftlint:disable:next force_unwrapping
-        let url = URL(string: "https://api.example.com/graphql")!
 
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: testURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer test-token", forHTTPHeaderField: "Authorization")
@@ -61,7 +65,7 @@ final class GraphQLNetworkObserverTests: XCTestCase {
         let context = observer.willSendRequest(request)
         XCTAssertTrue(observer.willSendRequestCalled)
         XCTAssertNotNil(context.requestId)
-        XCTAssertEqual(observer.lastRequest?.url, url)
+        XCTAssertEqual(observer.lastRequest?.url, testURL)
         XCTAssertEqual(observer.lastRequest?.httpMethod, "POST")
         XCTAssertEqual(observer.lastRequest?.value(forHTTPHeaderField: "Content-Type"), "application/json")
         XCTAssertEqual(observer.lastRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer test-token")
@@ -77,8 +81,7 @@ final class GraphQLNetworkObserverTests: XCTestCase {
 
     func testObserverContextContainsTimingInfo() {
         let observer = MockObserver()
-        let url = URL(string: "https://api.example.com/graphql")!
-        let request = URLRequest(url: url)
+        let request = URLRequest(url: testURL)
 
         let beforeTime = Date()
         let context = observer.willSendRequest(request)
@@ -91,8 +94,7 @@ final class GraphQLNetworkObserverTests: XCTestCase {
 
     func testObserverContextRequestIdIsUnique() {
         let observer = MockObserver()
-        let url = URL(string: "https://api.example.com/graphql")!
-        let request = URLRequest(url: url)
+        let request = URLRequest(url: testURL)
 
         let context1 = observer.willSendRequest(request)
         let context2 = observer.willSendRequest(request)
