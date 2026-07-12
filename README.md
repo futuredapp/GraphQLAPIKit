@@ -127,6 +127,19 @@ let queryResult = try await apiAdapter.fetch(query: query)
 let mutationResult = try await apiAdapter.perform(mutation: mutation)
 ```
 
+### Query retries
+
+Single-response queries can retry selected URL errors on the same underlying `URLSession`:
+
+```swift
+let configuration = GraphQLAPIConfiguration(
+    url: URL(string: "https://api.example.com/graphql")!,
+    queryRetryPolicy: .transientNetworkFailures
+)
+```
+
+The predefined policy retries `networkConnectionLost` and `timedOut` once. Retries are disabled by default and never apply to mutations, subscriptions, or incremental responses.
+
 ### Subscriptions
 ```swift
 let subscriptionStream = try await apiAdapter.subscribe(subscription: MySubscription())
