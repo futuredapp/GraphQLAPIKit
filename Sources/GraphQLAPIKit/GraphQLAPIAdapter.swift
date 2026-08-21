@@ -211,7 +211,7 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol, Sendable {
                 requestConfiguration: config
             )
 
-            return transformStream(apolloStream)
+            return transformStream(apolloStream.stream)
         }
     }
 
