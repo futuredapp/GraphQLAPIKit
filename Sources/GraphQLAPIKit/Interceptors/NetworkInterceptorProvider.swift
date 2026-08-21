@@ -2,6 +2,15 @@ import Apollo
 import ApolloAPI
 import Foundation
 
+/// Provides per-request headers to the interceptor chain via structured concurrency.
+///
+/// Since `InterceptorProvider.graphQLInterceptors(for:)` only receives the operation (not request configuration),
+/// we use `@TaskLocal` to pass per-request headers from the adapter method to the interceptor provider.
+/// The interceptor provider reads this value when creating interceptors, capturing the headers in the interceptor struct.
+enum RequestHeadersContext {
+    @TaskLocal static var headers: RequestHeaders?
+}
+
 struct NetworkInterceptorProvider: InterceptorProvider {
     private let defaultHeaders: [String: String]
     private let networkObservers: [any GraphQLNetworkObserver]
@@ -18,7 +27,10 @@ struct NetworkInterceptorProvider: InterceptorProvider {
         for operation: Operation
     ) -> [any GraphQLInterceptor] {
         [
-            RequestHeaderInterceptor(defaultHeaders: defaultHeaders),
+            RequestHeaderInterceptor(
+                defaultHeaders: defaultHeaders,
+                requestHeaders: RequestHeadersContext.headers
+            ),
             MaxRetryInterceptor()
         ]
     }

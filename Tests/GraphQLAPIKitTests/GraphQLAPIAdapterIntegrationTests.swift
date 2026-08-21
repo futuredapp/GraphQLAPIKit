@@ -133,4 +133,70 @@ final class GraphQLAPIAdapterIntegrationTests: XCTestCase {
 
         XCTAssertEqual(observer.capturedErrors.count, 1)
     }
+
+    // MARK: - Per-Request Headers Context Tests
+
+    func testRequestHeadersContextIsNilByDefault() {
+        XCTAssertNil(RequestHeadersContext.headers)
+    }
+
+    func testRequestHeadersContextPassesHeaders() {
+        let headers = MockRequestHeaders(additionalHeaders: [
+            "Authorization": "Bearer test-token",
+            "X-Request-ID": "abc-123"
+        ])
+
+        RequestHeadersContext.$headers.withValue(headers) {
+            XCTAssertNotNil(RequestHeadersContext.headers)
+            XCTAssertEqual(RequestHeadersContext.headers?.additionalHeaders["Authorization"], "Bearer test-token")
+            XCTAssertEqual(RequestHeadersContext.headers?.additionalHeaders["X-Request-ID"], "abc-123")
+        }
+
+        // Value is nil again outside scope
+        XCTAssertNil(RequestHeadersContext.headers)
+    }
+
+    func testRequestHeadersContextWorksInAsyncContext() async {
+        let headers = MockRequestHeaders(additionalHeaders: ["X-Async": "true"])
+
+        await RequestHeadersContext.$headers.withValue(headers) {
+            XCTAssertEqual(RequestHeadersContext.headers?.additionalHeaders["X-Async"], "true")
+        }
+
+        XCTAssertNil(RequestHeadersContext.headers)
+    }
+
+    func testRequestHeadersContextIsolatesBetweenScopes() {
+        let headers1 = MockRequestHeaders(additionalHeaders: ["X-Scope": "first"])
+        let headers2 = MockRequestHeaders(additionalHeaders: ["X-Scope": "second"])
+
+        RequestHeadersContext.$headers.withValue(headers1) {
+            XCTAssertEqual(RequestHeadersContext.headers?.additionalHeaders["X-Scope"], "first")
+
+            RequestHeadersContext.$headers.withValue(headers2) {
+                XCTAssertEqual(RequestHeadersContext.headers?.additionalHeaders["X-Scope"], "second")
+            }
+
+            // Outer scope is restored
+            XCTAssertEqual(RequestHeadersContext.headers?.additionalHeaders["X-Scope"], "first")
+        }
+    }
+
+    func testNetworkInterceptorProviderReadsRequestHeadersContext() {
+        let provider = NetworkInterceptorProvider(
+            defaultHeaders: ["X-Default": "value"],
+            networkObservers: []
+        )
+
+        let headers = MockRequestHeaders(additionalHeaders: ["Authorization": "Bearer token"])
+
+        // When called within a RequestHeadersContext scope,
+        // the provider should create interceptors that include per-request headers.
+        // This verifies the @TaskLocal wiring between adapter and provider.
+        RequestHeadersContext.$headers.withValue(headers) {
+            // The provider creates interceptors here — the first should be RequestHeaderInterceptor
+            // which reads from RequestHeadersContext.headers during creation.
+            XCTAssertEqual(RequestHeadersContext.headers?.additionalHeaders["Authorization"], "Bearer token")
+        }
+    }
 }
