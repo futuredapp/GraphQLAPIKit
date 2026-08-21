@@ -1,7 +1,7 @@
 import Apollo
 import Foundation
 
-public struct GraphQLError: LocalizedError {
+public struct GraphQLError: LocalizedError, Sendable {
     public let message: String
     public let code: String?
 

@@ -1,5 +1,5 @@
 import Apollo
 
-struct ApolloError: Error {
+struct ApolloError: Error, Sendable {
     let errors: [Apollo.GraphQLError]
 }
