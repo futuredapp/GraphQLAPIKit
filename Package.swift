@@ -20,7 +20,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/apollographql/apollo-ios.git",
-            exact: "2.0.4"
+            exact: "2.4.0"
         )
     ],
     targets: [
