@@ -77,6 +77,7 @@ public protocol GraphQLAPIAdapterProtocol: AnyObject, Sendable {
 
 public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol, Sendable {
     private let apollo: ApolloClient
+    private let queryRetryPolicy: GraphQLQueryRetryPolicy
 
     /// Creates a new GraphQL API adapter with the given configuration.
     ///
@@ -101,37 +102,28 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol, Sendable {
             networkTransport: networkTransport,
             store: store
         )
+        self.queryRetryPolicy = configuration.queryRetryPolicy
     }
 
     public func fetch<Query: GraphQLQuery>(
         query: Query,
         configuration: GraphQLRequestConfiguration = GraphQLRequestConfiguration()
     ) async throws -> Query.Data where Query.ResponseFormat == SingleResponseFormat {
-        try await RequestHeadersContext.$headers.withValue(configuration.headers) {
-            let config = RequestConfiguration(writeResultsToCache: false)
+        var retryCount: UInt = 0
 
-            let response = try await apollo.fetch(
-                query: query,
-                cachePolicy: .networkOnly,
-                requestConfiguration: config
-            )
-
-            if let errors = response.errors, !errors.isEmpty {
-                throw GraphQLAPIAdapterError(error: ApolloError(errors: errors))
+        while true {
+            do {
+                return try await fetchOnce(query: query, configuration: configuration)
+            } catch {
+                guard retryCount < queryRetryPolicy.maxRetryCount,
+                      queryRetryPolicy.shouldRetry(error: error) else {
+                    throw GraphQLAPIAdapterError(error: error)
+                }
+                guard !Task.isCancelled else {
+                    throw GraphQLAPIAdapterError.cancelled
+                }
+                retryCount += 1
             }
-
-            guard let data = response.data else {
-                assertionFailure("No data received")
-                throw GraphQLAPIAdapterError.unhandled(
-                    NSError(
-                        domain: "GraphQLAPIKit",
-                        code: -1,
-                        userInfo: [NSLocalizedDescriptionKey: "No data received"]
-                    )
-                )
-            }
-
-            return data
         }
     }
 
@@ -139,30 +131,34 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol, Sendable {
         mutation: Mutation,
         configuration: GraphQLRequestConfiguration = GraphQLRequestConfiguration()
     ) async throws -> Mutation.Data where Mutation.ResponseFormat == SingleResponseFormat {
-        try await RequestHeadersContext.$headers.withValue(configuration.headers) {
-            let config = RequestConfiguration(writeResultsToCache: false)
+        do {
+            return try await RequestHeadersContext.$headers.withValue(configuration.headers) {
+                let config = RequestConfiguration(writeResultsToCache: false)
 
-            let response = try await apollo.perform(
-                mutation: mutation,
-                requestConfiguration: config
-            )
-
-            if let errors = response.errors, !errors.isEmpty {
-                throw GraphQLAPIAdapterError(error: ApolloError(errors: errors))
-            }
-
-            guard let data = response.data else {
-                assertionFailure("No data received")
-                throw GraphQLAPIAdapterError.unhandled(
-                    NSError(
-                        domain: "GraphQLAPIKit",
-                        code: -1,
-                        userInfo: [NSLocalizedDescriptionKey: "No data received"]
-                    )
+                let response = try await apollo.perform(
+                    mutation: mutation,
+                    requestConfiguration: config
                 )
-            }
 
-            return data
+                if let errors = response.errors, !errors.isEmpty {
+                    throw GraphQLAPIAdapterError(error: ApolloError(errors: errors))
+                }
+
+                guard let data = response.data else {
+                    assertionFailure("No data received")
+                    throw GraphQLAPIAdapterError.unhandled(
+                        NSError(
+                            domain: "GraphQLAPIKit",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: "No data received"]
+                        )
+                    )
+                }
+
+                return data
+            }
+        } catch {
+            throw GraphQLAPIAdapterError(error: error)
         }
     }
 
@@ -220,6 +216,38 @@ public final class GraphQLAPIAdapter: GraphQLAPIAdapterProtocol, Sendable {
     }
 
     // MARK: - Private Helpers
+
+    private func fetchOnce<Query: GraphQLQuery>(
+        query: Query,
+        configuration: GraphQLRequestConfiguration
+    ) async throws -> Query.Data where Query.ResponseFormat == SingleResponseFormat {
+        try await RequestHeadersContext.$headers.withValue(configuration.headers) {
+            let config = RequestConfiguration(writeResultsToCache: false)
+
+            let response = try await apollo.fetch(
+                query: query,
+                cachePolicy: .networkOnly,
+                requestConfiguration: config
+            )
+
+            if let errors = response.errors, !errors.isEmpty {
+                throw GraphQLAPIAdapterError(error: ApolloError(errors: errors))
+            }
+
+            guard let data = response.data else {
+                assertionFailure("No data received")
+                throw GraphQLAPIAdapterError.unhandled(
+                    NSError(
+                        domain: "GraphQLAPIKit",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "No data received"]
+                    )
+                )
+            }
+
+            return data
+        }
+    }
 
     /// Transforms an Apollo response stream into a data stream with error mapping.
     private func transformStream<Operation: GraphQLOperation>(
